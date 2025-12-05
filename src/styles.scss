@@ -1,17 +1,290 @@
 @import "primeicons/primeicons.css";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+// ============================================
+// PROMETHEUS THEME - Futuristic Dark Interface
+// ============================================
+
+:root {
+  // Core colors
+  --prometheus-bg-deep: #0a0e14;
+  --prometheus-bg-dark: #0d1117;
+  --prometheus-bg-card: #161b22;
+  --prometheus-border: #21262d;
+  --prometheus-border-light: #30363d;
+
+  // Cyan accent colors (fire/light)
+  --prometheus-cyan: #00e5ff;
+  --prometheus-cyan-dim: #00bcd4;
+  --prometheus-cyan-bright: #18ffff;
+  --prometheus-cyan-glow: rgba(0, 229, 255, 0.4);
+  --prometheus-cyan-subtle: rgba(0, 229, 255, 0.1);
+
+  // Text colors
+  --prometheus-text-primary: #e6edf3;
+  --prometheus-text-secondary: #8b949e;
+  --prometheus-text-muted: #6e7681;
+
+  // Fonts
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  // Effects
+  --glow-cyan: 0 0 20px var(--prometheus-cyan-glow);
+  --glow-cyan-strong: 0 0 30px var(--prometheus-cyan-glow), 0 0 60px rgba(0, 229, 255, 0.2);
+}
 
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html {
+  background: var(--prometheus-bg-deep);
+}
+
+body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--p-surface-ground);
-  color: var(--p-text-color);
+  background: var(--prometheus-bg-deep);
+  color: var(--prometheus-text-primary);
+}
+
+// Apply dark mode class for PrimeNG
+html.prometheus-dark,
+body.prometheus-dark {
+  color-scheme: dark;
+}
+
+// ============================================
+// BACKGROUND EFFECTS
+// ============================================
+
+.prometheus-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(0, 188, 212, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0e14 0%, #0d1117 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(0, 229, 255, 0.02) 50px, rgba(0, 229, 255, 0.02) 51px),
+      repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(0, 229, 255, 0.02) 50px, rgba(0, 229, 255, 0.02) 51px);
+    pointer-events: none;
+  }
+}
+
+// ============================================
+// TYPOGRAPHY
+// ============================================
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--prometheus-text-primary);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+// ============================================
+// GLOW & ANIMATION UTILITIES
+// ============================================
+
+.glow-text {
+  text-shadow: var(--glow-cyan);
+}
+
+.glow-border {
+  box-shadow: var(--glow-cyan);
+}
+
+.glow-strong {
+  box-shadow: var(--glow-cyan-strong);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--prometheus-cyan-glow); }
+  50% { box-shadow: 0 0 25px var(--prometheus-cyan-glow), 0 0 40px rgba(0, 229, 255, 0.15); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+// ============================================
+// SCROLLBAR STYLING
+// ============================================
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--prometheus-bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--prometheus-border-light);
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--prometheus-cyan-dim);
+  }
+}
+
+// ============================================
+// PRIMENG OVERRIDES
+// ============================================
+
+// Buttons
+.p-button {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+
+  &:not(.p-button-text):not(.p-button-outlined) {
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+
+    &:hover {
+      box-shadow: var(--glow-cyan);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Cards
+.p-card {
+  background: var(--prometheus-bg-card) !important;
+  border: 1px solid var(--prometheus-border) !important;
+  border-radius: 8px;
+
+  &:hover {
+    border-color: rgba(0, 229, 255, 0.3) !important;
+  }
+}
+
+// Inputs
+.p-inputtext,
+.p-textarea,
+.p-password input {
+  background: var(--prometheus-bg-card) !important;
+  border-color: var(--prometheus-border) !important;
+  color: var(--prometheus-text-primary) !important;
+  font-family: var(--font-body);
+  transition: all 0.3s ease;
+
+  &:focus,
+  &:hover {
+    border-color: var(--prometheus-cyan) !important;
+    box-shadow: 0 0 0 1px var(--prometheus-cyan-glow) !important;
+  }
+
+  &::placeholder {
+    color: var(--prometheus-text-muted);
+  }
+}
+
+// Avatar
+.p-avatar {
+  background: linear-gradient(135deg, var(--prometheus-cyan-dim), #0097a7) !important;
+  color: var(--prometheus-bg-deep) !important;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+// Progress Spinner
+.p-progress-spinner-circle {
+  stroke: var(--prometheus-cyan) !important;
+}
+
+// Tabs
+.p-tabs {
+  .p-tablist {
+    background: transparent;
+    border-color: var(--prometheus-border);
+  }
+
+  .p-tab {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+
+    &:hover {
+      color: var(--prometheus-cyan);
+    }
+
+    &[data-p-active="true"] {
+      color: var(--prometheus-cyan);
+      border-color: var(--prometheus-cyan);
+    }
+  }
+}
+
+// Messages
+.p-message {
+  border-radius: 6px;
+
+  &.p-message-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  &.p-message-success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+}
+
+// Tooltip
+.p-tooltip {
+  .p-tooltip-text {
+    background: var(--prometheus-bg-card);
+    border: 1px solid var(--prometheus-border);
+    color: var(--prometheus-text-primary);
+    font-family: var(--font-body);
+  }
+}
+
+// ============================================
+// SELECTION STYLING
+// ============================================
+
+::selection {
+  background: var(--prometheus-cyan);
+  color: var(--prometheus-bg-deep);
+}
+
+// ============================================
+// FOCUS STATES
+// ============================================
+
+*:focus-visible {
+  outline: 2px solid var(--prometheus-cyan);
+  outline-offset: 2px;
 }

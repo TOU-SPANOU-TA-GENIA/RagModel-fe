@@ -1,8 +1,10 @@
 <div class="chat-window">
   @if (!chatService.activeChatId()) {
     <div class="empty-state">
-      <i class="pi pi-comments"></i>
-      <h3>Καλωσήρθες στο RagModel AI</h3>
+      <div class="logo-display">
+        <img src="assets/images/prometheus-logo.png" alt="Prometheus" />
+      </div>
+      <h3>Καλωσήρθες στο PROMETHEUS</h3>
       <p>Επίλεξε μια συνομιλία ή ξεκίνα μια νέα</p>
     </div>
   } @else {
@@ -22,7 +24,7 @@
               @if (message.role === 'user') {
                 <i class="pi pi-user"></i>
               } @else {
-                <i class="pi pi-android"></i>
+                <i class="pi pi-bolt"></i>
               }
             </div>
             <div class="message-content">
@@ -64,7 +66,7 @@
           [loading]="sending"
         />
       </div>
-      <small class="input-hint">Enter για αποστολή, Shift+Enter για νέα γραμμή</small>
+      <small class="input-hint">Enter για αποστολή • Shift+Enter για νέα γραμμή</small>
     </div>
   }
 </div>
