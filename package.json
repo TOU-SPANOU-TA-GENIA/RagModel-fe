@@ -1,5 +1,5 @@
 {
-  "name": "rag-chat-ui",
+  "name": "ragmodel-fe",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -7,7 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:rag-chat-ui": "node dist/rag-chat-ui/server/server.mjs"
+    "serve:ssr:ragmodel-fe": "node dist/ragmodel-fe/server/server.mjs"
   },
   "prettier": {
     "printWidth": 100,
