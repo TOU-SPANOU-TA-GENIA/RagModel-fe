@@ -1,0 +1,128 @@
+<div class="login-container">
+  <p-card class="login-card">
+    <ng-template pTemplate="header">
+      <div class="login-header">
+        <i class="pi pi-comments"></i>
+        <h2>RagModel AI</h2>
+      </div>
+    </ng-template>
+
+    <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+      <p-tablist>
+        <p-tab [value]="0">Σύνδεση</p-tab>
+        <p-tab [value]="1">Εγγραφή</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Login Panel -->
+        <p-tabpanel [value]="0">
+          <div class="form-container">
+            @if (error()) {
+              <p-message severity="error" [text]="error()!" />
+            }
+            @if (success()) {
+              <p-message severity="success" [text]="success()!" />
+            }
+
+            <div class="field">
+              <label for="login-username">Όνομα χρήστη</label>
+              <input
+                pInputText
+                id="login-username"
+                [(ngModel)]="loginUsername"
+                placeholder="Εισάγετε όνομα χρήστη"
+                [disabled]="loading()"
+              />
+            </div>
+
+            <div class="field">
+              <label for="login-password">Κωδικός</label>
+              <p-password
+                id="login-password"
+                [(ngModel)]="loginPassword"
+                [feedback]="false"
+                [toggleMask]="true"
+                placeholder="Εισάγετε κωδικό"
+                [disabled]="loading()"
+                styleClass="w-full"
+              />
+            </div>
+
+            <p-button
+              label="Σύνδεση"
+              icon="pi pi-sign-in"
+              (onClick)="onLogin()"
+              [loading]="loading()"
+              styleClass="w-full"
+            />
+          </div>
+        </p-tabpanel>
+
+        <!-- Register Panel -->
+        <p-tabpanel [value]="1">
+          <div class="form-container">
+            @if (error()) {
+              <p-message severity="error" [text]="error()!" />
+            }
+
+            <div class="field">
+              <label for="reg-username">Όνομα χρήστη</label>
+              <input
+                pInputText
+                id="reg-username"
+                [(ngModel)]="registerUsername"
+                placeholder="Τουλάχιστον 3 χαρακτήρες"
+                [disabled]="loading()"
+              />
+            </div>
+
+            <div class="field">
+              <label for="reg-email">Email</label>
+              <input
+                pInputText
+                id="reg-email"
+                type="email"
+                [(ngModel)]="registerEmail"
+                placeholder="example@email.com"
+                [disabled]="loading()"
+              />
+            </div>
+
+            <div class="field">
+              <label for="reg-password">Κωδικός</label>
+              <p-password
+                id="reg-password"
+                [(ngModel)]="registerPassword"
+                [toggleMask]="true"
+                placeholder="Τουλάχιστον 6 χαρακτήρες"
+                [disabled]="loading()"
+                styleClass="w-full"
+              />
+            </div>
+
+            <div class="field">
+              <label for="reg-confirm">Επιβεβαίωση κωδικού</label>
+              <p-password
+                id="reg-confirm"
+                [(ngModel)]="registerConfirmPassword"
+                [feedback]="false"
+                [toggleMask]="true"
+                placeholder="Επαναλάβετε τον κωδικό"
+                [disabled]="loading()"
+                styleClass="w-full"
+              />
+            </div>
+
+            <p-button
+              label="Εγγραφή"
+              icon="pi pi-user-plus"
+              (onClick)="onRegister()"
+              [loading]="loading()"
+              styleClass="w-full"
+            />
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </p-card>
+</div>

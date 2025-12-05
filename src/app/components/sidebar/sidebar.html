@@ -1,0 +1,34 @@
+<div class="sidebar">
+  <div class="sidebar-header">
+    <p-button
+      icon="pi pi-plus"
+      label="Νέα Συνομιλία"
+      (onClick)="onNewChat()"
+      styleClass="w-full"
+      severity="secondary"
+    />
+  </div>
+
+  <div class="sidebar-content">
+    <app-chat-list />
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info" [pTooltip]="authService.currentUser()?.email || ''">
+      <p-avatar
+        [label]="getUserInitial()"
+        shape="circle"
+        styleClass="user-avatar"
+      />
+      <span class="username">{{ authService.currentUser()?.username }}</span>
+      <p-button
+        icon="pi pi-sign-out"
+        [rounded]="true"
+        [text]="true"
+        severity="secondary"
+        pTooltip="Αποσύνδεση"
+        (onClick)="logout()"
+      />
+    </div>
+  </div>
+</div>

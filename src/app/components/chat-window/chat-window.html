@@ -1,0 +1,74 @@
+<div class="chat-window">
+  @if (!chatService.activeChatId()) {
+    <!-- No chat selected -->
+    <div class="empty-state">
+      <i class="pi pi-comments"></i>
+      <h3>Καλωσήρθες στο RagModel AI</h3>
+      <p>Επίλεξε μια συνομιλία ή ξεκίνα μια νέα</p>
+    </div>
+  } @else {
+    <!-- Chat header -->
+    <div class="chat-header">
+      <h3>{{ chatService.activeChat()?.title }}</h3>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-container" #messagesContainer>
+      @if (chatService.loading()) {
+        <div class="loading-messages">
+          <p-progressSpinner strokeWidth="4" [style]="{width: '40px', height: '40px'}" />
+        </div>
+      } @else {
+        @for (message of chatService.messages(); track trackMessage($index, message)) {
+          <div class="message" [class]="message.role">
+            <div class="message-avatar">
+              @if (message.role === 'user') {
+                <i class="pi pi-user"></i>
+              } @else {
+                <i class="pi pi-android"></i>
+              }
+            </div>
+            <div class="message-content">
+              <div class="message-text" [class.streaming]="message.isStreaming">
+                {{ message.content }}
+                @if (message.isStreaming) {
+                  <span class="cursor">▋</span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (chatService.messages().length === 0) {
+          <div class="no-messages">
+            <p>Ξεκίνα τη συνομιλία στέλνοντας ένα μήνυμα!</p>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Input area -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea
+          pInputTextarea
+          #messageInput
+          [(ngModel)]="newMessage"
+          (keydown)="onKeydown($event)"
+          placeholder="Γράψε ένα μήνυμα..."
+          [autoResize]="true"
+          [rows]="1"
+          [disabled]="sending"
+        ></textarea>
+        <p-button
+          icon="pi pi-send"
+          [rounded]="true"
+          (onClick)="sendMessage()"
+          [disabled]="!newMessage.trim() || sending"
+          [loading]="sending"
+        />
+      </div>
+      <small class="input-hint">Enter για αποστολή, Shift+Enter για νέα γραμμή</small>
+    </div>
+  }
+</div>

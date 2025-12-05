@@ -1,0 +1,80 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--p-primary-100) 0%, var(--p-primary-50) 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+
+  :host ::ng-deep .p-card-body {
+    padding: 0;
+  }
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 1rem;
+  background: var(--p-primary-500);
+  color: white;
+  border-radius: var(--p-border-radius) var(--p-border-radius) 0 0;
+
+  i {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--p-text-secondary-color);
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+:host ::ng-deep {
+  .p-password {
+    width: 100%;
+  }
+
+  .p-password-input {
+    width: 100%;
+  }
+
+  .p-message {
+    width: 100%;
+  }
+
+  .p-tabs {
+    .p-tablist {
+      justify-content: center;
+    }
+  }
+}

@@ -1,0 +1,40 @@
+<div class="chat-list">
+  @if (chatService.loading()) {
+    <div class="loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Φόρτωση...</span>
+    </div>
+  } @else if (chatService.chats().length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-comments"></i>
+      <p>Καμία συνομιλία</p>
+      <small>Ξεκίνα μια νέα συνομιλία!</small>
+    </div>
+  } @else {
+    @for (chat of chatService.chats(); track chat.id) {
+      <div
+        class="chat-item"
+        [class.active]="chat.id === chatService.activeChatId()"
+        (click)="selectChat(chat)"
+      >
+        <div class="chat-info">
+          <span class="chat-title">{{ chat.title }}</span>
+          <span class="chat-meta">
+            {{ chat.message_count }} μηνύματα · {{ formatDate(chat.updated_at) }}
+          </span>
+        </div>
+        <p-button
+          icon="pi pi-trash"
+          [rounded]="true"
+          [text]="true"
+          severity="danger"
+          size="small"
+          pTooltip="Διαγραφή"
+          (onClick)="deleteChat($event, chat)"
+        />
+      </div>
+    }
+  }
+</div>
+
+<p-confirmDialog />
