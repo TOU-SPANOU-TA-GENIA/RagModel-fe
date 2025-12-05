@@ -41,7 +41,7 @@ export class LoginComponent {
   loading = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
-  activeTab = signal(0);
+  activeTab = signal<number>(0);
 
   constructor(
     private authService: AuthService,
@@ -100,7 +100,6 @@ export class LoginComponent {
         this.loading.set(false);
         this.success.set('Επιτυχής εγγραφή! Μπορείς να συνδεθείς.');
         this.activeTab.set(0);
-        // Clear register form
         this.registerUsername = '';
         this.registerEmail = '';
         this.registerPassword = '';
@@ -113,7 +112,8 @@ export class LoginComponent {
     });
   }
 
-  onTabChange(index: number): void {
+  onTabChange(event: any): void {
+    const index = typeof event === 'number' ? event : 0;
     this.activeTab.set(index);
     this.error.set(null);
     this.success.set(null);

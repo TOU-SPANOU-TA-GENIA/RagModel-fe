@@ -2,7 +2,7 @@ import { Component, ElementRef, ViewChild, AfterViewChecked } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ChatService } from '../../services/chat.service';
 import { StreamingService } from '../../services/streaming.service';
@@ -15,7 +15,7 @@ import { ChatMessage } from '../../models/chat';
     CommonModule,
     FormsModule,
     ButtonModule,
-    InputTextareaModule,
+    TextareaModule,
     ProgressSpinnerModule
   ],
   templateUrl: './chat-window.html',
@@ -27,7 +27,7 @@ export class ChatWindowComponent implements AfterViewChecked {
 
   newMessage = '';
   sending = false;
-  useStreaming = true; // Toggle between streaming and non-streaming
+  useStreaming = true;
 
   private shouldScroll = false;
 
@@ -70,7 +70,6 @@ export class ChatWindowComponent implements AfterViewChecked {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    // Send on Enter, new line on Shift+Enter
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();

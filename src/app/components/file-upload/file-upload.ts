@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatService } from '../../services/chat.service';
 import { FileUploadModule } from 'primeng/fileupload';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-file-upload',
@@ -11,12 +12,17 @@ import { FileUploadModule } from 'primeng/fileupload';
   styleUrl: './file-upload.scss'
 })
 export class FileUploadComponent {
-  constructor(private chatService: ChatService) {}
+  private apiUrl = environment.apiUrl;
 
-  onUpload(event: any) {
-    for (let file of event.files) {
-      this.chatService.uploadFile(file).subscribe(res => {
-        console.log("File uploaded:", res);
+  constructor(private http: HttpClient) {}
+
+  onUpload(event: { files: File[] }): void {
+    for (const file of event.files) {
+      const formData = new FormData();
+      formData.append('file', file);
+      this.http.post(`${this.apiUrl}/upload`, formData).subscribe({
+        next: (res) => console.log('File uploaded:', res),
+        error: (err) => console.error('Upload failed:', err)
       });
     }
   }

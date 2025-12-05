@@ -14,7 +14,7 @@ import { AuthService } from './services/auth.service';
     RouterOutlet,
     SidebarComponent,
     ChatWindowComponent,
-    ChatListComponent
+    //ChatListComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'

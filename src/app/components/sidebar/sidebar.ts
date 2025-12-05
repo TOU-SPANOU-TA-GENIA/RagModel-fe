@@ -7,11 +7,19 @@ import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
+import { ChatListComponent } from '../chat-list/chat-list';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ButtonModule, TooltipModule, AvatarModule, MenuModule],
+  imports: [
+    CommonModule,
+    ButtonModule,
+    TooltipModule,
+    AvatarModule,
+    MenuModule,
+    ChatListComponent
+  ],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss'
 })

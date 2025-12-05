@@ -1,18 +1,15 @@
 <div class="chat-window">
   @if (!chatService.activeChatId()) {
-    <!-- No chat selected -->
     <div class="empty-state">
       <i class="pi pi-comments"></i>
       <h3>Καλωσήρθες στο RagModel AI</h3>
       <p>Επίλεξε μια συνομιλία ή ξεκίνα μια νέα</p>
     </div>
   } @else {
-    <!-- Chat header -->
     <div class="chat-header">
       <h3>{{ chatService.activeChat()?.title }}</h3>
     </div>
 
-    <!-- Messages -->
     <div class="messages-container" #messagesContainer>
       @if (chatService.loading()) {
         <div class="loading-messages">
@@ -47,11 +44,10 @@
       }
     </div>
 
-    <!-- Input area -->
     <div class="input-area">
       <div class="input-wrapper">
         <textarea
-          pInputTextarea
+          pTextarea
           #messageInput
           [(ngModel)]="newMessage"
           (keydown)="onKeydown($event)"
