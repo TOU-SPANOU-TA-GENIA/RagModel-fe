@@ -1,59 +1,219 @@
-# RagChatUi
+# RagModel Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.3.
+Angular 20 frontend for the RagModel AI chat application. Connects to the RagModel-be FastAPI backend with JWT authentication and real-time streaming responses.
 
-## Development server
+## Prerequisites
 
-To start a local development server, run:
+- **Node.js** 20.19+ or 22.12+ (required for Angular 20)
+- **npm** (comes with Node.js)
+- **Angular CLI** 20+
+
+Check versions:
+```bash
+node --version
+npm --version
+ng version
+```
+
+## Installation
+
+### 1. Install Angular CLI globally
+
+```bash
+npm install -g @angular/cli@20
+```
+
+### 2. Install project dependencies
+
+```bash
+cd ragmodel-fe
+npm install
+```
+
+### 3. Verify PrimeNG installation
+
+The project uses PrimeNG 20 for UI components. These should be installed automatically, but if needed:
+
+```bash
+npm install primeng @primeuix/themes @primeuix/styles primeicons
+```
+
+## Running the Application
+
+### Development server
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Navigate to `http://localhost:4200`. The app reloads automatically on file changes.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### Run on different port
 
 ```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
+ng serve --port 4300
 ```
 
 ## Building
 
-To build the project run:
+### Development build
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+### Production build
 
 ```bash
-ng test
+ng build --configuration=production
 ```
 
-## Running end-to-end tests
+Output is stored in `dist/ragmodel-fe/`.
 
-For end-to-end (e2e) testing, run:
+## Generating New Components
+
+### Component
 
 ```bash
-ng e2e
+ng generate component components/my-component
+# or shorthand
+ng g c components/my-component
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### Service
 
-## Additional Resources
+```bash
+ng generate service services/my-service
+# or shorthand
+ng g s services/my-service
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### Guard
+
+```bash
+ng generate guard guards/my-guard
+# or shorthand
+ng g g guards/my-guard
+```
+
+### Other schematics
+
+```bash
+ng g directive directives/my-directive
+ng g pipe pipes/my-pipe
+ng g interface models/my-interface
+ng g class models/my-class
+ng g enum models/my-enum
+```
+
+### Generate with options
+
+```bash
+# Skip test file
+ng g c components/my-component --skip-tests
+
+# Inline template and styles
+ng g c components/my-component --inline-template --inline-style
+
+# Flat (no subfolder)
+ng g c components/my-component --flat
+```
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| JWT Authentication | Login/Register with token-based auth |
+| Chat Management | Create, list, delete conversations |
+| Real-time Streaming | SSE-based token streaming |
+| Reactive State | Angular signals for state management |
+| Greek Language | Full Greek UI support |
+| PrimeNG UI | Modern component library |
+
+## API Integration
+
+The frontend connects to these backend endpoints:
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/auth/register` | POST | No | Register user |
+| `/auth/login` | POST | No | Login, get JWT |
+| `/auth/me` | GET | Yes | Current user info |
+| `/chats/` | GET | Yes | List chats |
+| `/chats/` | POST | Yes | Create chat |
+| `/chats/{id}` | DELETE | Yes | Delete chat |
+| `/chats/{id}/messages` | GET | Yes | Get messages |
+| `/chats/{id}/messages` | POST | Yes | Send message |
+| `/stream/chat` | POST | Yes | Stream response (SSE) |
+
+## Troubleshooting
+
+### Module not found errors
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Angular CLI version mismatch
+
+```bash
+npm install -g @angular/cli@20
+npm install @angular/cli@20 --save-dev
+```
+
+### Port already in use
+
+```bash
+ng serve --port 4300
+```
+
+### CORS errors
+
+Ensure backend has CORS enabled for `http://localhost:4200`:
+
+```python
+# In FastAPI backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:4200"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+### Clear Angular cache
+
+```bash
+ng cache clean
+```
+
+## Useful Commands
+
+| Command | Description |
+|---------|-------------|
+| `ng serve` | Start dev server |
+| `ng build` | Build project |
+| `ng test` | Run unit tests |
+| `ng lint` | Lint code |
+| `ng update` | Update Angular |
+| `ng version` | Show versions |
+| `ng doc <keyword>` | Open Angular docs |
+
+## Dependencies
+
+### Core
+- Angular 20.3
+- RxJS 7.8
+- TypeScript 5.9
+- Zone.js 0.15
+
+### UI
+- PrimeNG 20.2
+- PrimeIcons 7.0
+- @primeuix/themes 1.2
+
+## License
+
+Private project - All rights reserved
