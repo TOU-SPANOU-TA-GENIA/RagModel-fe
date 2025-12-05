@@ -1,4 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+// src/app/services/auth.service.ts
+import { Injectable, signal, computed, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
@@ -17,6 +19,7 @@ const USER_KEY = 'auth_user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private apiUrl = environment.apiUrl;
+  private platformId = inject(PLATFORM_ID);
 
   // Reactive state using signals
   private authState = signal<AuthState>({
@@ -38,9 +41,20 @@ export class AuthService {
   }
 
   /**
+   * Check if running in browser environment
+   */
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
+
+  /**
    * Load authentication state from localStorage on app init
    */
   private loadStoredAuth(): void {
+    if (!this.isBrowser()) {
+      return;
+    }
+
     const token = localStorage.getItem(TOKEN_KEY);
     const userJson = localStorage.getItem(USER_KEY);
 
@@ -96,14 +110,12 @@ export class AuthService {
    * Logout and clear all auth state
    */
   logout(): void {
-    // Optionally call server logout endpoint
     this.http.post(`${this.apiUrl}/auth/logout`, {}).subscribe({
       complete: () => {
         this.clearAuth();
         this.router.navigate(['/login']);
       },
       error: () => {
-        // Clear anyway even if server call fails
         this.clearAuth();
         this.router.navigate(['/login']);
       }
@@ -114,8 +126,10 @@ export class AuthService {
    * Set authentication state and persist to storage
    */
   private setAuth(token: string, user: User): void {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    if (this.isBrowser()) {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
 
     this.authState.set({
       isAuthenticated: true,
@@ -128,8 +142,10 @@ export class AuthService {
    * Clear all authentication state
    */
   private clearAuth(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    if (this.isBrowser()) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
 
     this.authState.set({
       isAuthenticated: false,
