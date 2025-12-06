@@ -38,7 +38,6 @@
                   (click)="toggleThinking()"
                   pTooltip="Εμφάνιση σκέψης"
                 >
-                  <i class="pi pi-brain"></i>
                   <span>Thinking</span>
                 </button>
               </div>
@@ -73,7 +72,6 @@
           (click)="toggleThinking()"
           pTooltip="Εμφάνιση/Απόκρυψη σκέψης AI"
         >
-          <i class="pi pi-brain"></i>
         </button>
       </div>
 
@@ -108,7 +106,6 @@
                           </div>
                           <span>Σκέφτομαι...</span>
                         } @else {
-                          <i class="pi pi-brain"></i>
                           <span>Σκέφτηκα για {{ message.thinkingDuration || 'λίγα' }} δευτερόλεπτα</span>
                           <i class="pi" [class.pi-chevron-down]="!message.thinkingExpanded" [class.pi-chevron-up]="message.thinkingExpanded"></i>
                         }
