@@ -1,6 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError, throwError, BehaviorSubject } from 'rxjs';
+import { Observable, tap, catchError, throwError } from 'rxjs';
 import {
   ChatMessage,
   ChatSummary,
@@ -50,7 +50,7 @@ export class ChatService {
   }
 
   /**
-   * Create a new chat
+   * Create a new chat with optional title
    */
   createChat(title?: string): Observable<ChatSummary> {
     const request: CreateChatRequest = { title: title || 'Νέα Συνομιλία' };
@@ -75,12 +75,15 @@ export class ChatService {
    */
   loadMessages(chatId: string): void {
     this.loadingSignal.set(true);
+
     this.http.get<ChatMessage[]>(`${this.apiUrl}/chats/${chatId}/messages`).subscribe({
       next: messages => {
+        console.log('Loaded messages:', messages);
         this.messagesSignal.set(messages);
         this.loadingSignal.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Failed to load messages:', err);
         this.messagesSignal.set([]);
         this.loadingSignal.set(false);
       }
@@ -88,7 +91,55 @@ export class ChatService {
   }
 
   /**
-   * Send message (non-streaming) - adds user message immediately, then gets response
+   * Update chat title
+   */
+  updateChatTitle(chatId: string, title: string): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/chats/${chatId}`, { title }).pipe(
+      tap(() => {
+        this.chatsSignal.update(chats =>
+          chats.map(c => c.id === chatId ? { ...c, title } : c)
+        );
+      })
+    );
+  }
+
+  /**
+   * Generate a title from content (first ~50 chars, word-boundary aware)
+   */
+  generateTitleFromContent(content: string): string {
+    const cleaned = content.replace(/\s+/g, ' ').trim();
+    const maxLength = 50;
+
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+
+    const truncated = cleaned.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+
+    if (lastSpace > 20) {
+      return truncated.substring(0, lastSpace) + '...';
+    }
+
+    return truncated + '...';
+  }
+
+  /**
+   * Auto-name chat if it has default title and no messages yet
+   */
+  autoNameChatIfNeeded(chatId: string, firstUserMessage: string): void {
+    const chat = this.chatsSignal().find(c => c.id === chatId);
+
+    if (chat && chat.title === 'Νέα Συνομιλία' && chat.message_count === 0) {
+      const generatedTitle = this.generateTitleFromContent(firstUserMessage);
+      this.updateChatTitle(chatId, generatedTitle).subscribe({
+        error: (err) => console.error('Failed to update chat title:', err)
+      });
+    }
+  }
+
+  /**
+   * Send message (non-streaming)
    */
   sendMessage(content: string): Observable<AgentResponse> {
     const chatId = this.activeChatIdSignal();
@@ -96,7 +147,10 @@ export class ChatService {
       return throwError(() => new Error('No active chat'));
     }
 
-    // Immediately add user message to UI
+    // Auto-name on first message
+    this.autoNameChatIfNeeded(chatId, content);
+
+    // Add user message to UI immediately
     const userMessage: ChatMessage = {
       role: 'user',
       content,
@@ -104,7 +158,7 @@ export class ChatService {
     };
     this.messagesSignal.update(msgs => [...msgs, userMessage]);
 
-    // Add placeholder for assistant response
+    // Add placeholder for assistant
     const placeholderMessage: ChatMessage = {
       role: 'assistant',
       content: '',
@@ -118,7 +172,6 @@ export class ChatService {
       { content }
     ).pipe(
       tap(response => {
-        // Replace placeholder with actual response
         this.messagesSignal.update(msgs => {
           const updated = [...msgs];
           const lastIdx = updated.length - 1;
@@ -133,15 +186,10 @@ export class ChatService {
           }
           return updated;
         });
-
-        // Update chat in list
         this.updateChatInList(chatId);
       }),
       catchError(error => {
-        // Remove placeholder on error
-        this.messagesSignal.update(msgs =>
-          msgs.filter(m => !m.isStreaming)
-        );
+        this.messagesSignal.update(msgs => msgs.filter(m => !m.isStreaming));
         return throwError(() => error);
       })
     );
@@ -163,7 +211,7 @@ export class ChatService {
   }
 
   /**
-   * Update streaming message content
+   * Append token to streaming message
    */
   appendToStreamingMessage(token: string): void {
     this.messagesSignal.update(msgs => {
@@ -195,7 +243,6 @@ export class ChatService {
       return updated;
     });
 
-    // Update chat in list
     const chatId = this.activeChatIdSignal();
     if (chatId) {
       this.updateChatInList(chatId);
@@ -235,7 +282,7 @@ export class ChatService {
   }
 
   /**
-   * Update chat timestamp in list after new message
+   * Update chat in list after new message
    */
   private updateChatInList(chatId: string): void {
     this.chatsSignal.update(chats => {
@@ -249,7 +296,6 @@ export class ChatService {
         message_count: updated[idx].message_count + 1
       };
 
-      // Move to top
       const [chat] = updated.splice(idx, 1);
       return [chat, ...updated];
     });
