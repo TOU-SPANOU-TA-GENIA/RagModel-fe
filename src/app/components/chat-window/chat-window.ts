@@ -1,9 +1,11 @@
+// src/app/components/chat-window/chat-window.ts
 import { Component, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TooltipModule } from 'primeng/tooltip';
 import { ChatService } from '../../services/chat.service';
 import { StreamingService } from '../../services/streaming.service';
 import { ChatMessage } from '../../models/chat';
@@ -16,7 +18,8 @@ import { ChatMessage } from '../../models/chat';
     FormsModule,
     ButtonModule,
     TextareaModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    TooltipModule
   ],
   templateUrl: './chat-window.html',
   styleUrl: './chat-window.scss'
@@ -28,6 +31,7 @@ export class ChatWindowComponent implements AfterViewChecked {
   newMessage = '';
   sending = false;
   useStreaming = true;
+  showThinking = true;  // Global toggle for showing thinking sections
 
   private shouldScroll = false;
 
@@ -56,7 +60,8 @@ export class ChatWindowComponent implements AfterViewChecked {
 
     try {
       if (this.useStreaming) {
-        await this.streamingService.sendStreamingMessage(content, chatId);
+        // Pass showThinking to request thinking from backend
+        await this.streamingService.sendStreamingMessage(content, chatId, this.showThinking);
       } else {
         await this.chatService.sendMessage(content).toPromise();
       }
@@ -78,6 +83,48 @@ export class ChatWindowComponent implements AfterViewChecked {
 
   trackMessage(index: number, message: ChatMessage): string {
     return `${index}-${message.role}-${message.timestamp}`;
+  }
+
+  /**
+   * Toggle global thinking visibility
+   */
+  toggleThinking(): void {
+    this.showThinking = !this.showThinking;
+  }
+
+  /**
+   * Toggle individual message's thinking expansion
+   */
+  toggleMessageThinking(message: ChatMessage): void {
+    message.thinkingExpanded = !message.thinkingExpanded;
+  }
+
+  /**
+   * Parse thinking text into bullet points
+   */
+  parseThinking(thinking: string): string[] {
+    if (!thinking) return [];
+
+    // Split by sentences or line breaks
+    const thoughts = thinking
+      .split(/[.!?]\s+|\n+/)
+      .map(t => t.trim())
+      .filter(t => t.length > 10);  // Filter out very short fragments
+
+    // Limit to reasonable number of thoughts
+    return thoughts.slice(0, 5);
+  }
+
+  /**
+   * Copy message content to clipboard
+   */
+  copyMessage(message: ChatMessage): void {
+    navigator.clipboard.writeText(message.content).then(() => {
+      // Could show a toast notification here
+      console.log('Copied to clipboard');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
   }
 
   private scrollToBottom(): void {

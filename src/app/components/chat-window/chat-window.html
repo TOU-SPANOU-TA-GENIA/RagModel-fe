@@ -1,5 +1,6 @@
 <div class="chat-window">
   @if (!chatService.activeChatId()) {
+    <!-- No chat selected state -->
     <div class="empty-state">
       <div class="logo-display">
         <img src="images/prometheus-logo.png" alt="Prometheus" />
@@ -8,65 +9,203 @@
       <p>Επίλεξε μια συνομιλία ή ξεκίνα μια νέα</p>
     </div>
   } @else {
-    <div class="chat-header">
-      <h3>{{ chatService.activeChat()?.title }}</h3>
-    </div>
+    @if (chatService.messages().length === 0 && !chatService.loading()) {
+      <!-- New chat - centered input like DeepSeek -->
+      <div class="new-chat-state">
+        <div class="centered-content">
+          <div class="logo-small">
+            <img src="images/prometheus-logo.png" alt="Prometheus" />
+          </div>
+          <h2>Πώς μπορώ να σε βοηθήσω;</h2>
 
-    <div class="messages-container" #messagesContainer>
-      @if (chatService.loading()) {
-        <div class="loading-messages">
-          <p-progressSpinner strokeWidth="4" [style]="{width: '40px', height: '40px'}" />
-        </div>
-      } @else {
-        @for (message of chatService.messages(); track trackMessage($index, message)) {
-          <div class="message" [class]="message.role">
-            <div class="message-avatar">
-              @if (message.role === 'user') {
-                <i class="pi pi-user"></i>
-              } @else {
-                <i class="pi pi-bolt"></i>
-              }
-            </div>
-            <div class="message-content">
-              <div class="message-text" [class.streaming]="message.isStreaming">
-                {{ message.content }}
-                @if (message.isStreaming) {
-                  <span class="cursor">▋</span>
-                }
+          <div class="centered-input-container">
+            <textarea
+              pTextarea
+              #messageInput
+              [(ngModel)]="newMessage"
+              (keydown)="onKeydown($event)"
+              placeholder="Γράψε ένα μήνυμα στον Prometheus..."
+              [autoResize]="true"
+              [rows]="1"
+              [disabled]="sending"
+            ></textarea>
+
+            <div class="input-actions">
+              <div class="feature-toggles">
+                <button
+                  class="feature-btn"
+                  [class.active]="showThinking"
+                  (click)="toggleThinking()"
+                  pTooltip="Εμφάνιση σκέψης"
+                >
+                  <i class="pi pi-brain"></i>
+                  <span>Thinking</span>
+                </button>
+              </div>
+
+              <div class="send-actions">
+                <button
+                  class="icon-btn"
+                  pTooltip="Επισύναψη αρχείου"
+                >
+                  <i class="pi pi-paperclip"></i>
+                </button>
+                <p-button
+                  icon="pi pi-arrow-up"
+                  [rounded]="true"
+                  (onClick)="sendMessage()"
+                  [disabled]="!newMessage.trim() || sending"
+                  [loading]="sending"
+                  styleClass="send-btn"
+                />
               </div>
             </div>
           </div>
-        }
-
-        @if (chatService.messages().length === 0) {
-          <div class="no-messages">
-            <p>Ξεκίνα τη συνομιλία στέλνοντας ένα μήνυμα!</p>
-          </div>
-        }
-      }
-    </div>
-
-    <div class="input-area">
-      <div class="input-wrapper">
-        <textarea
-          pTextarea
-          #messageInput
-          [(ngModel)]="newMessage"
-          (keydown)="onKeydown($event)"
-          placeholder="Γράψε ένα μήνυμα..."
-          [autoResize]="true"
-          [rows]="1"
-          [disabled]="sending"
-        ></textarea>
-        <p-button
-          icon="pi pi-send"
-          [rounded]="true"
-          (onClick)="sendMessage()"
-          [disabled]="!newMessage.trim() || sending"
-          [loading]="sending"
-        />
+        </div>
       </div>
-      <small class="input-hint">Enter για αποστολή • Shift+Enter για νέα γραμμή</small>
-    </div>
+    } @else {
+      <!-- Existing chat with messages -->
+      <div class="chat-header">
+        <h3>{{ chatService.activeChat()?.title }}</h3>
+        <button
+          class="thinking-toggle"
+          [class.active]="showThinking"
+          (click)="toggleThinking()"
+          pTooltip="Εμφάνιση/Απόκρυψη σκέψης AI"
+        >
+          <i class="pi pi-brain"></i>
+        </button>
+      </div>
+
+      <div class="messages-container" #messagesContainer>
+        @if (chatService.loading()) {
+          <div class="loading-messages">
+            <p-progressSpinner strokeWidth="4" [style]="{width: '40px', height: '40px'}" />
+          </div>
+        } @else {
+          @for (message of chatService.messages(); track trackMessage($index, message)) {
+            <div class="message" [class]="message.role">
+              <div class="message-avatar">
+                @if (message.role === 'user') {
+                  <i class="pi pi-user"></i>
+                } @else {
+                  <i class="pi pi-bolt"></i>
+                }
+              </div>
+              <div class="message-body">
+                <!-- Live thinking section for assistant messages -->
+                @if (message.role === 'assistant' && showThinking) {
+                  @if (message.thinkingInProgress || message.thinking) {
+                    <div class="thinking-section" [class.expanded]="message.thinkingExpanded || message.thinkingInProgress" [class.in-progress]="message.thinkingInProgress">
+                      <button
+                        class="thinking-header"
+                        (click)="toggleMessageThinking(message)"
+                        [disabled]="message.thinkingInProgress"
+                      >
+                        @if (message.thinkingInProgress) {
+                          <div class="thinking-indicator">
+                            <i class="pi pi-spin pi-spinner"></i>
+                          </div>
+                          <span>Σκέφτομαι...</span>
+                        } @else {
+                          <i class="pi pi-brain"></i>
+                          <span>Σκέφτηκα για {{ message.thinkingDuration || 'λίγα' }} δευτερόλεπτα</span>
+                          <i class="pi" [class.pi-chevron-down]="!message.thinkingExpanded" [class.pi-chevron-up]="message.thinkingExpanded"></i>
+                        }
+                      </button>
+                      @if (message.thinkingExpanded || message.thinkingInProgress) {
+                        <div class="thinking-content" [class.live]="message.thinkingInProgress">
+                          @if (message.thinking) {
+                            <div class="thinking-text">
+                              {{ message.thinking }}
+                              @if (message.thinkingInProgress) {
+                                <span class="cursor">▋</span>
+                              }
+                            </div>
+                          } @else if (message.thinkingInProgress) {
+                            <div class="thinking-loading">
+                              <div class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+
+                <!-- Main message content -->
+                <div class="message-content">
+                  @if (message.isStreaming && !message.content && !message.thinkingInProgress) {
+                    <!-- Loading indicator when waiting for response -->
+                    <div class="response-loading">
+                      <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                      <span class="loading-text">Δημιουργία απάντησης...</span>
+                    </div>
+                  } @else {
+                    <div class="message-text" [class.streaming]="message.isStreaming && !message.thinkingInProgress">
+                      {{ message.content }}
+                      @if (message.isStreaming && message.content && !message.thinkingInProgress) {
+                        <span class="cursor">▋</span>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Message actions for assistant -->
+                @if (message.role === 'assistant' && !message.isStreaming) {
+                  <div class="message-actions">
+                    <button class="action-btn" pTooltip="Αντιγραφή" (click)="copyMessage(message)">
+                      <i class="pi pi-copy"></i>
+                    </button>
+                    <button class="action-btn" pTooltip="Αναδημιουργία">
+                      <i class="pi pi-refresh"></i>
+                    </button>
+                    <button class="action-btn" pTooltip="Καλή απάντηση">
+                      <i class="pi pi-thumbs-up"></i>
+                    </button>
+                    <button class="action-btn" pTooltip="Κακή απάντηση">
+                      <i class="pi pi-thumbs-down"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Bottom input area -->
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea
+            pTextarea
+            #messageInput
+            [(ngModel)]="newMessage"
+            (keydown)="onKeydown($event)"
+            placeholder="Γράψε ένα μήνυμα..."
+            [autoResize]="true"
+            [rows]="1"
+            [disabled]="sending"
+          ></textarea>
+          <p-button
+            icon="pi pi-arrow-up"
+            [rounded]="true"
+            (onClick)="sendMessage()"
+            [disabled]="!newMessage.trim() || sending"
+            [loading]="sending"
+            styleClass="send-btn"
+          />
+        </div>
+        <small class="input-hint">Enter για αποστολή • Shift+Enter για νέα γραμμή</small>
+      </div>
+    }
   }
 </div>

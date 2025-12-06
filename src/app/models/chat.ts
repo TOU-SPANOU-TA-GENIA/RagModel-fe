@@ -1,6 +1,17 @@
+// src/app/models/chat.ts
+// Chat and Auth related models and interfaces
+
 // =============================================================================
-// Authentication Models
+// Auth Models
 // =============================================================================
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  created_at?: string;
+  last_login?: string;
+}
 
 export interface LoginRequest {
   username: string;
@@ -13,14 +24,6 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  created_at?: string;
-  last_login?: string;
-}
-
 export interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -28,9 +31,10 @@ export interface LoginResponse {
 }
 
 export interface AuthState {
-  isAuthenticated: boolean;
   user: User | null;
   token: string | null;
+  isAuthenticated: boolean;
+  isLoading?: boolean;  // Optional - not used in all places
 }
 
 // =============================================================================
@@ -41,8 +45,14 @@ export interface ChatMessage {
   id?: number;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: string | Date;
+  timestamp?: string;
   isStreaming?: boolean;
+
+  // Thinking-related properties
+  thinking?: string;           // The thinking content from AI
+  thinkingExpanded?: boolean;  // Whether thinking section is expanded
+  thinkingInProgress?: boolean; // Whether AI is currently thinking
+  thinkingDuration?: number;   // How long AI thought (in seconds)
 }
 
 export interface ChatSummary {
@@ -50,6 +60,7 @@ export interface ChatSummary {
   title: string;
   updated_at: string;
   message_count: number;
+  created_at?: string;
 }
 
 export interface ChatDetail {
@@ -57,62 +68,19 @@ export interface ChatDetail {
   title: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface CreateChatRequest {
-  title?: string;
-}
-
-export interface SendMessageRequest {
-  content: string;
+  user_id?: number;
 }
 
 export interface AgentResponse {
   answer: string;
   message_id: number;
   timestamp: string;
+  thinking?: string;
 }
-
-// =============================================================================
-// Streaming Models
-// =============================================================================
-
-export interface StreamingChatRequest {
-  content: string;
-  chat_id?: string;
-  include_thinking?: boolean;
-  max_tokens?: number;
-}
-
-export type StreamEventType =
-  | 'token'
-  | 'thinking_start'
-  | 'thinking_end'
-  | 'response_start'
-  | 'response_end'
-  | 'done'
-  | 'error'
-  | 'heartbeat';
 
 export interface StreamEvent {
-  type: StreamEventType;
+  type: 'token' | 'thinking_start' | 'thinking_end' | 'thinking_token' |
+        'response_start' | 'response_end' | 'done' | 'error' | 'heartbeat' | 'status';
   data: string;
-}
-
-// =============================================================================
-// API Response Models
-// =============================================================================
-
-export interface ApiError {
-  error: string;
-  detail?: string;
-}
-
-export interface HealthResponse {
-  status: string;
-  database: string;
-  redis_available: boolean;
-  language?: string;
-  streaming?: boolean;
-  rag_status?: string;
+  metadata?: any;
 }
