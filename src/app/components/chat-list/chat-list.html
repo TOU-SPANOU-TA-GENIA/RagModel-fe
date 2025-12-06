@@ -1,40 +1,67 @@
+<!-- src/app/components/chat-list/chat-list.html -->
 <div class="chat-list">
+  <p-confirmDialog />
+
   @if (chatService.loading()) {
-    <div class="loading">
+    <div class="loading-chats">
       <i class="pi pi-spin pi-spinner"></i>
-      <span>Φόρτωση...</span>
     </div>
-  } @else if (chatService.chats().length === 0) {
-    <div class="empty-state">
-      <i class="pi pi-comments"></i>
-      <p>Καμία συνομιλία</p>
-      <small>Ξεκίνα μια νέα συνομιλία!</small>
-    </div>
-  } @else {
-    @for (chat of chatService.chats(); track chat.id) {
-      <div
-        class="chat-item"
-        [class.active]="chat.id === chatService.activeChatId()"
-        (click)="selectChat(chat)"
-      >
-        <div class="chat-info">
-          <span class="chat-title">{{ chat.title }}</span>
-          <span class="chat-meta">
-            {{ chat.message_count }} μηνύματα · {{ formatDate(chat.updated_at) }}
-          </span>
+  }
+
+  @for (chat of chatService.chats(); track chat.id) {
+    <div
+      class="chat-item"
+      [class.active]="chatService.activeChatId() === chat.id"
+      [class.editing]="editingChatId === chat.id"
+      (click)="selectChat(chat)"
+    >
+      @if (editingChatId === chat.id) {
+        <!-- Inline edit mode -->
+        <div class="chat-edit-container" (click)="$event.stopPropagation()">
+          <input
+            pInputText
+            type="text"
+            [(ngModel)]="editingTitle"
+            (keydown)="onEditKeydown($event, chat)"
+            (blur)="saveTitle(chat)"
+            class="chat-title-input"
+            autofocus
+          />
         </div>
-        <p-button
-          icon="pi pi-trash"
-          [rounded]="true"
-          [text]="true"
-          severity="danger"
-          size="small"
-          pTooltip="Διαγραφή"
-          (onClick)="deleteChat($event, chat)"
-        />
+      } @else {
+        <!-- Normal display mode -->
+        <div class="chat-info">
+          <span class="chat-title" [pTooltip]="chat.title" tooltipPosition="right">
+            {{ chat.title }}
+          </span>
+          <span class="chat-date">{{ formatDate(chat.updated_at) }}</span>
+        </div>
+
+        <div class="chat-actions">
+          <button
+            class="action-btn"
+            pTooltip="Μετονομασία"
+            tooltipPosition="top"
+            (click)="startEditing($event, chat)"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            class="action-btn delete"
+            pTooltip="Διαγραφή"
+            tooltipPosition="top"
+            (click)="deleteChat($event, chat)"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
+      }
+    </div>
+  } @empty {
+    @if (!chatService.loading()) {
+      <div class="empty-list">
+        <p>Δεν υπάρχουν συνομιλίες</p>
       </div>
     }
   }
 </div>
-
-<p-confirmDialog />

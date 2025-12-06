@@ -1,3 +1,4 @@
+// src/app/components/sidebar/sidebar.ts
 import { Component, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -39,8 +40,14 @@ export class SidebarComponent {
     private chatService: ChatService
   ) {}
 
+  /**
+   * Create new chat.
+   * The chatService.createChat() now handles both creation AND navigation.
+   */
   onNewChat(): void {
-    this.chatService.createChat().subscribe();
+    this.chatService.createChat().subscribe({
+      error: err => console.error('Failed to create chat:', err)
+    });
   }
 
   logout(): void {
