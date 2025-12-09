@@ -1,41 +1,45 @@
 // src/app/services/chat.service.ts
-// Chat service with navigation, rename, and auto-title support
-
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ChatMessage, ChatSummary, ChatDetail, AgentResponse } from '../models/chat';
+import { ChatMessage, ChatSummary, Chat, GeneratedFileInfo, FileAttachment } from '../models/chat';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
   private apiUrl = environment.apiUrl;
-  private router = inject(Router);
 
-  // Signals for reactive state
+  // State signals
   private chatsSignal = signal<ChatSummary[]>([]);
-  private activeChatIdSignal = signal<string | null>(null);
   private messagesSignal = signal<ChatMessage[]>([]);
-  private loadingSignal = signal<boolean>(false);
+  private activeChatIdSignal = signal<string | null>(null);
+  private loadingSignal = signal(false);
 
-  // Public computed signals
-  readonly chats = computed(() => this.chatsSignal());
-  readonly activeChatId = computed(() => this.activeChatIdSignal());
+  // Public readonly signals
+  readonly chats = this.chatsSignal.asReadonly();
+  readonly messages = this.messagesSignal.asReadonly();
+  readonly activeChatId = this.activeChatIdSignal.asReadonly();
+  readonly isLoading = this.loadingSignal.asReadonly();
+
+  // Computed
   readonly activeChat = computed(() => {
     const id = this.activeChatIdSignal();
     return this.chatsSignal().find(c => c.id === id) || null;
   });
-  readonly messages = computed(() => this.messagesSignal());
-  readonly loading = computed(() => this.loadingSignal());
 
-  constructor(private http: HttpClient) {}
+  readonly hasChats = computed(() => this.chatsSignal().length > 0);
 
-  // =========================================================================
+  constructor(
+    private http: HttpClient,
+    private router: Router
+  ) {}
+
+  // ==========================================================================
   // Chat Management
-  // =========================================================================
+  // ==========================================================================
 
   loadChats(): Observable<ChatSummary[]> {
     this.loadingSignal.set(true);
@@ -43,282 +47,138 @@ export class ChatService {
       tap(chats => {
         this.chatsSignal.set(chats);
         this.loadingSignal.set(false);
-      }),
-      catchError(error => {
-        this.loadingSignal.set(false);
-        return throwError(() => error);
       })
     );
   }
 
-  /**
-   * Create a new chat and navigate to it.
-   * Uses generic approach: after successful creation, set active and navigate.
-   */
-  createChat(title?: string): Observable<ChatSummary> {
-    return this.http.post<ChatSummary>(`${this.apiUrl}/chats/`, {
-      title: title || 'Νέα Συνομιλία'
-    }).pipe(
+  createChat(title?: string): Observable<{ id: string; title: string }> {
+    return this.http.post<{ id: string; title: string }>(
+      `${this.apiUrl}/chats/`,
+      { title: title || 'Νέα Συνομιλία' }
+    ).pipe(
       tap(chat => {
-        // Add to list at the beginning (most recent first)
-        this.chatsSignal.update(chats => [chat, ...chats]);
-
+        this.chatsSignal.update(chats => [{
+          id: chat.id,
+          title: chat.title,
+          last_updated: new Date().toISOString(),
+          message_count: 0
+        }, ...chats]);
         // Set as active and navigate
-        this.setActiveChat(chat.id);
+        this.activeChatIdSignal.set(chat.id);
+        this.messagesSignal.set([]);
         this.navigateToChat(chat.id);
-      }),
-      catchError(error => throwError(() => error))
+      })
     );
-  }
-
-  /**
-   * Navigate to a specific chat.
-   * Generic approach: routing is decoupled from business logic.
-   */
-  navigateToChat(chatId: string): void {
-    this.router.navigate(['/chat', chatId]);
-  }
-
-  /**
-   * Set active chat and load its messages.
-   */
-  setActiveChat(chatId: string): void {
-    if (this.activeChatIdSignal() === chatId) return;
-
-    this.activeChatIdSignal.set(chatId);
-    this.loadMessages(chatId);
-  }
-
-  /**
-   * Rename a chat.
-   * Generic approach: accepts any chat ID and new title.
-   */
-  renameChat(chatId: string, newTitle: string): Observable<ChatSummary> {
-    return this.http.patch<ChatSummary>(`${this.apiUrl}/chats/${chatId}`, {
-      title: newTitle
-    }).pipe(
-      tap(updatedChat => {
-        // Update in the chats list
-        this.chatsSignal.update(chats =>
-          chats.map(c => c.id === chatId ? { ...c, title: newTitle } : c)
-        );
-      }),
-      catchError(error => throwError(() => error))
-    );
-  }
-
-  /**
-   * Generate title from content and update chat.
-   * Generic approach: extracts meaningful title from any text content.
-   */
-  generateAndSetTitle(chatId: string, content: string): void {
-    const title = this.generateTitleFromContent(content);
-    if (title) {
-      this.renameChat(chatId, title).subscribe({
-        error: err => console.error('Failed to auto-rename chat:', err)
-      });
-    }
-  }
-
-  /**
-   * Extract a meaningful title from content.
-   * Generic approach: works with any language content, truncates intelligently.
-   */
-  private generateTitleFromContent(content: string): string {
-    if (!content || content.trim().length === 0) return '';
-
-    // Clean up the content
-    let cleaned = content
-      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-      .replace(/\[.*?\]\(.*?\)/g, '') // Remove markdown links
-      .replace(/[#*_~`]/g, '')        // Remove markdown formatting
-      .replace(/\s+/g, ' ')           // Normalize whitespace
-      .trim();
-
-    // Get first sentence or meaningful chunk
-    const firstSentence = cleaned.match(/^[^.!?;:\n]+/)?.[0] || cleaned;
-
-    // Truncate to reasonable title length
-    const maxLength = 50;
-    if (firstSentence.length <= maxLength) {
-      return firstSentence;
-    }
-
-    // Truncate at word boundary
-    const truncated = firstSentence.substring(0, maxLength);
-    const lastSpace = truncated.lastIndexOf(' ');
-
-    return lastSpace > 20
-      ? truncated.substring(0, lastSpace) + '...'
-      : truncated + '...';
   }
 
   deleteChat(chatId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/chats/${chatId}`).pipe(
       tap(() => {
         this.chatsSignal.update(chats => chats.filter(c => c.id !== chatId));
-
-        // If deleted the active chat, clear selection
         if (this.activeChatIdSignal() === chatId) {
           this.activeChatIdSignal.set(null);
           this.messagesSignal.set([]);
-          this.router.navigate(['/chat']);
         }
-      }),
-      catchError(error => throwError(() => error))
+      })
     );
   }
 
-  // =========================================================================
-  // Message Management
-  // =========================================================================
+  renameChat(chatId: string, newTitle: string): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/chats/${chatId}`, { title: newTitle }).pipe(
+      tap(() => {
+        this.chatsSignal.update(chats =>
+          chats.map(c => c.id === chatId ? { ...c, title: newTitle } : c)
+        );
+      })
+    );
+  }
 
-  private loadMessages(chatId: string): void {
+  setActiveChat(chatId: string): void {
+    this.activeChatIdSignal.set(chatId);
+    this.loadMessages(chatId);
+  }
+
+  navigateToChat(chatId: string): void {
+    this.router.navigate(['/chat', chatId]);
+  }
+
+  // ==========================================================================
+  // Message Management
+  // ==========================================================================
+
+  loadMessages(chatId: string): void {
     this.loadingSignal.set(true);
-    this.http.get<ChatMessage[]>(`${this.apiUrl}/chats/${chatId}/messages`).pipe(
-      tap(messages => {
+    this.http.get<ChatMessage[]>(`${this.apiUrl}/chats/${chatId}/messages`).subscribe({
+      next: (messages) => {
         this.messagesSignal.set(messages);
         this.loadingSignal.set(false);
-      }),
-      catchError(error => {
+      },
+      error: (err) => {
+        console.error('Failed to load messages:', err);
         this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    ).subscribe();
-  }
-
-  sendMessage(content: string): Observable<AgentResponse> {
-    const chatId = this.activeChatIdSignal();
-    if (!chatId) {
-      return throwError(() => new Error('No active chat'));
-    }
-
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content,
-      timestamp: new Date().toISOString()
-    };
-
-    const placeholderMessage: ChatMessage = {
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toISOString(),
-      isStreaming: true
-    };
-
-    this.messagesSignal.update(msgs => [...msgs, userMessage, placeholderMessage]);
-
-    return this.http.post<AgentResponse>(
-      `${this.apiUrl}/chats/${chatId}/messages`,
-      { content }
-    ).pipe(
-      tap(response => {
-        this.messagesSignal.update(msgs => {
-          const updated = [...msgs];
-          const lastIdx = updated.length - 1;
-          if (updated[lastIdx]?.isStreaming) {
-            updated[lastIdx] = {
-              id: response.message_id,
-              role: 'assistant',
-              content: response.answer,
-              timestamp: response.timestamp,
-              isStreaming: false,
-              thinking: response.thinking
-            };
-          }
-          return updated;
-        });
-
-        this.updateChatInList(chatId);
-
-        // Auto-title on first response
-        this.autoTitleIfNeeded(chatId, response.answer);
-      }),
-      catchError(error => {
-        this.messagesSignal.update(msgs => msgs.filter(m => !m.isStreaming));
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Auto-title chat if it still has the default title.
-   * Generic approach: checks for default pattern, not specific strings.
-   */
-  private autoTitleIfNeeded(chatId: string, responseContent: string): void {
-    const chat = this.activeChat();
-    if (!chat) return;
-
-    // Check if title is still the default (generic pattern matching)
-    const isDefaultTitle = this.isDefaultChatTitle(chat.title);
-    const isFirstResponse = this.messages().filter(m => m.role === 'assistant').length === 1;
-
-    if (isDefaultTitle && isFirstResponse) {
-      this.generateAndSetTitle(chatId, responseContent);
-    }
-  }
-
-  /**
-   * Check if a title matches the default pattern.
-   * Generic approach: supports multiple default patterns.
-   */
-  private isDefaultChatTitle(title: string): boolean {
-    const defaultPatterns = [
-      /^νέα συνομιλία$/i,
-      /^new chat$/i,
-      /^untitled$/i,
-      /^chat \d+$/i
-    ];
-    return defaultPatterns.some(pattern => pattern.test(title.trim()));
-  }
-
-  private updateChatInList(chatId: string): void {
-    this.chatsSignal.update(chats => {
-      const idx = chats.findIndex(c => c.id === chatId);
-      if (idx === -1) return chats;
-
-      const updated = [...chats];
-      const chat = { ...updated[idx], updated_at: new Date().toISOString() };
-      updated.splice(idx, 1);
-      return [chat, ...updated];
+      }
     });
   }
 
-  // =========================================================================
-  // Streaming Support Methods
-  // =========================================================================
+  sendMessage(content: string): Observable<ChatMessage> {
+    const chatId = this.activeChatIdSignal();
+    if (!chatId) {
+      throw new Error('No active chat');
+    }
 
-  addUserMessage(content: string): void {
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content,
-      timestamp: new Date().toISOString()
-    };
-    this.messagesSignal.update(msgs => [...msgs, userMessage]);
+    return this.http.post<ChatMessage>(
+      `${this.apiUrl}/chats/${chatId}/messages`,
+      { content, role: 'user' }
+    ).pipe(
+      tap(() => this.loadMessages(chatId))
+    );
   }
 
-  startStreamingMessage(): void {
-    const placeholderMessage: ChatMessage = {
+  // ==========================================================================
+  // Streaming Message Management
+  // ==========================================================================
+
+  addUserMessage(content: string, attachedFiles?: FileAttachment[]): void {
+    const message: ChatMessage = {
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+      attachedFiles
+    };
+    this.messagesSignal.update(msgs => [...msgs, message]);
+  }
+
+  createStreamingMessage(): void {
+    const message: ChatMessage = {
       role: 'assistant',
       content: '',
       timestamp: new Date().toISOString(),
       isStreaming: true,
-      thinkingInProgress: false,
-      thinkingExpanded: false,
-      thinking: ''
+      thinking: '',
+      thinkingExpanded: true,
+      thinkingInProgress: false
     };
-    this.messagesSignal.update(msgs => [...msgs, placeholderMessage]);
+    this.messagesSignal.update(msgs => [...msgs, message]);
   }
 
   appendToStreamingMessage(token: string): void {
     this.messagesSignal.update(msgs => {
       const updated = [...msgs];
-      const lastIdx = updated.length - 1;
-      if (updated[lastIdx]?.isStreaming) {
-        updated[lastIdx] = {
-          ...updated[lastIdx],
-          content: updated[lastIdx].content + token
-        };
+      const last = updated[updated.length - 1];
+      if (last && last.isStreaming) {
+        last.content += token;
+      }
+      return updated;
+    });
+  }
+
+  updateStreamingThinking(inProgress: boolean): void {
+    this.messagesSignal.update(msgs => {
+      const updated = [...msgs];
+      const last = updated[updated.length - 1];
+      if (last && last.isStreaming) {
+        last.thinkingInProgress = inProgress;
+        last.thinkingExpanded = true;
       }
       return updated;
     });
@@ -327,75 +187,101 @@ export class ChatService {
   appendToStreamingThinking(token: string): void {
     this.messagesSignal.update(msgs => {
       const updated = [...msgs];
-      const lastIdx = updated.length - 1;
-      if (updated[lastIdx]?.isStreaming) {
-        updated[lastIdx] = {
-          ...updated[lastIdx],
-          thinking: (updated[lastIdx].thinking || '') + token
-        };
+      const last = updated[updated.length - 1];
+      if (last && last.isStreaming) {
+        last.thinking = (last.thinking || '') + token;
       }
       return updated;
     });
   }
 
-  updateStreamingThinking(inProgress: boolean, duration?: number): void {
+  finalizeStreamingThinking(fullThinking: string, duration: number): void {
     this.messagesSignal.update(msgs => {
       const updated = [...msgs];
-      const lastIdx = updated.length - 1;
-      if (updated[lastIdx]?.isStreaming) {
-        updated[lastIdx] = {
-          ...updated[lastIdx],
-          thinkingInProgress: inProgress,
-          thinkingExpanded: inProgress ? true : updated[lastIdx].thinkingExpanded,
-          thinkingDuration: duration ?? updated[lastIdx].thinkingDuration
-        };
+      const last = updated[updated.length - 1];
+      if (last && last.isStreaming) {
+        last.thinking = fullThinking;
+        last.thinkingDuration = duration;
+        last.thinkingInProgress = false;
+        last.thinkingExpanded = false;
       }
       return updated;
     });
   }
 
-  /**
-   * Finalize streaming and trigger auto-title.
-   */
-  finalizeStreamingMessage(thinking?: string, thinkingDuration?: number): void {
-    const chatId = this.activeChatIdSignal();
-
+  finalizeStreamingMessage(cleanedContent?: string): void {
     this.messagesSignal.update(msgs => {
       const updated = [...msgs];
-      const lastIdx = updated.length - 1;
-      if (updated[lastIdx]?.isStreaming) {
-        const finalContent = updated[lastIdx].content;
-        updated[lastIdx] = {
-          ...updated[lastIdx],
-          isStreaming: false,
-          thinkingInProgress: false,
-          thinking: thinking || updated[lastIdx].thinking,
-          thinkingDuration: thinkingDuration ?? updated[lastIdx].thinkingDuration
-        };
-
-        // Trigger auto-title after finalizing
-        if (chatId) {
-          setTimeout(() => this.autoTitleIfNeeded(chatId, finalContent), 100);
+      const last = updated[updated.length - 1];
+      if (last && last.isStreaming) {
+        last.isStreaming = false;
+        if (cleanedContent !== undefined) {
+          last.content = cleanedContent;
         }
       }
       return updated;
     });
+  }
 
-    if (chatId) {
-      this.updateChatInList(chatId);
-    }
+  attachGeneratedFile(fileInfo: GeneratedFileInfo): void {
+    this.messagesSignal.update(msgs => {
+      const updated = [...msgs];
+      const last = updated[updated.length - 1];
+      if (last && last.role === 'assistant') {
+        last.generatedFile = fileInfo;
+      }
+      return updated;
+    });
+  }
+
+  removeStreamingMessage(): void {
+    this.messagesSignal.update(msgs => {
+      if (msgs.length > 0 && msgs[msgs.length - 1].isStreaming) {
+        return msgs.slice(0, -1);
+      }
+      return msgs;
+    });
+  }
+
+  getCurrentStreamingMessage(): ChatMessage | null {
+    const msgs = this.messagesSignal();
+    const last = msgs[msgs.length - 1];
+    return last?.isStreaming ? last : null;
+  }
+
+  // ==========================================================================
+  // Utility
+  // ==========================================================================
+
+  clearMessages(): void {
+    this.messagesSignal.set([]);
+  }
+
+  clearActiveChat(): void {
+    this.activeChatIdSignal.set(null);
+    this.messagesSignal.set([]);
   }
 
   /**
-   * Remove streaming message (on error).
+   * Clear all state (used on logout)
    */
-  removeStreamingMessage(): void {
-    this.messagesSignal.update(msgs => msgs.filter(m => !m.isStreaming));
-  }
-
   clearState(): void {
     this.chatsSignal.set([]);
     this.activeChatIdSignal.set(null);
     this.messagesSignal.set([]);
+    this.loadingSignal.set(false);
+  }
+
+  /**
+   * Update chat in list after changes
+   */
+  private updateChatInList(chatId: string): void {
+    this.chatsSignal.update(chats =>
+      chats.map(c =>
+        c.id === chatId
+          ? { ...c, last_updated: new Date().toISOString() }
+          : c
+      )
+    );
   }
 }

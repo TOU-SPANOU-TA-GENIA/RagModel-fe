@@ -2,7 +2,7 @@
 <div class="chat-list">
   <p-confirmDialog />
 
-  @if (chatService.loading()) {
+  @if (chatService.isLoading()) {
     <div class="loading-chats">
       <i class="pi pi-spin pi-spinner"></i>
     </div>
@@ -34,7 +34,7 @@
           <span class="chat-title" [pTooltip]="chat.title" tooltipPosition="right">
             {{ chat.title }}
           </span>
-          <span class="chat-date">{{ formatDate(chat.updated_at) }}</span>
+          <span class="chat-date">{{ formatDate(chat.last_updated || chat.updated_at) }}</span>
         </div>
 
         <div class="chat-actions">
@@ -58,7 +58,7 @@
       }
     </div>
   } @empty {
-    @if (!chatService.loading()) {
+    @if (!chatService.isLoading()) {
       <div class="empty-list">
         <p>Δεν υπάρχουν συνομιλίες</p>
       </div>

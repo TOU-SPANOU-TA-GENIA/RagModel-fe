@@ -1,3 +1,4 @@
+<!-- src/app/components/chat-window/chat-window.html -->
 <div class="chat-window">
   @if (!chatService.activeChatId()) {
     <!-- No chat selected state -->
@@ -9,7 +10,7 @@
       <p>Επίλεξε μια συνομιλία ή ξεκίνα μια νέα</p>
     </div>
   } @else {
-    @if (chatService.messages().length === 0 && !chatService.loading()) {
+    @if (chatService.messages().length === 0 && !chatService.isLoading()) {
       <!-- New chat - centered input like DeepSeek -->
       <div class="new-chat-state">
         <div class="centered-content">
@@ -47,6 +48,7 @@
                 <button
                   class="icon-btn"
                   pTooltip="Επισύναψη αρχείου"
+                  (click)="triggerFileUpload()"
                 >
                   <i class="pi pi-paperclip"></i>
                 </button>
@@ -64,27 +66,15 @@
         </div>
       </div>
     } @else {
-      <!-- Existing chat with messages -->
-      <div class="chat-header">
-        <h3>{{ chatService.activeChat()?.title }}</h3>
-        <button
-          class="thinking-toggle"
-          [class.active]="showThinking"
-          (click)="toggleThinking()"
-          pTooltip="Εμφάνιση/Απόκρυψη σκέψης AI"
-        >
-          <i class="pi pi-lightbulb"></i>
-        </button>
-      </div>
-
-      <div class="messages-container" #messagesContainer>
-        @if (chatService.loading()) {
+      <!-- Messages list -->
+      <div class="messages-area" #messagesContainer>
+        @if (chatService.isLoading()) {
           <div class="loading-messages">
-            <p-progressSpinner strokeWidth="4" [style]="{width: '40px', height: '40px'}" />
+            <p-progressSpinner strokeWidth="3" />
           </div>
         } @else {
           @for (message of chatService.messages(); track trackMessage($index, message)) {
-            <div class="message" [class]="message.role">
+            <div class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
               <div class="message-avatar">
                 @if (message.role === 'user') {
                   <i class="pi pi-user"></i>
@@ -92,54 +82,62 @@
                   <i class="pi pi-bolt"></i>
                 }
               </div>
+
               <div class="message-body">
-                <!-- Live thinking section for assistant messages -->
-                @if (message.role === 'assistant' && showThinking) {
-                  @if (message.thinkingInProgress || message.thinking) {
-                    <div class="thinking-section" [class.expanded]="message.thinkingExpanded || message.thinkingInProgress" [class.in-progress]="message.thinkingInProgress">
-                      <button
-                        class="thinking-header"
-                        (click)="toggleMessageThinking(message)"
-                        [disabled]="message.thinkingInProgress"
-                      >
-                        @if (message.thinkingInProgress) {
-                          <div class="thinking-indicator">
-                            <i class="pi pi-spin pi-spinner"></i>
-                          </div>
-                          <span>Σκέφτομαι...</span>
-                        } @else {
-                          <span>Σκέφτηκα για {{ message.thinkingDuration || 'λίγα' }} δευτερόλεπτα</span>
-                          <i class="pi" [class.pi-chevron-down]="!message.thinkingExpanded" [class.pi-chevron-up]="message.thinkingExpanded"></i>
-                        }
-                      </button>
-                      @if (message.thinkingExpanded || message.thinkingInProgress) {
-                        <div class="thinking-content" [class.live]="message.thinkingInProgress">
-                          @if (message.thinking) {
-                            <div class="thinking-text">
-                              {{ message.thinking }}
-                              @if (message.thinkingInProgress) {
-                                <span class="cursor">▋</span>
-                              }
-                            </div>
-                          } @else if (message.thinkingInProgress) {
-                            <div class="thinking-loading">
-                              <div class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                              </div>
-                            </div>
-                          }
-                        </div>
+                <!-- Attached files indicator -->
+                @if (message.attachedFiles?.length) {
+                  <div class="attached-files">
+                    @for (file of message.attachedFiles; track file.file_id) {
+                      <div class="file-chip" (click)="downloadFile(file)">
+                        <i class="pi pi-file"></i>
+                        <span>{{ file.original_name }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Thinking section -->
+                @if (message.role === 'assistant' && showThinking && (message.thinking || message.thinkingInProgress)) {
+                  <div class="thinking-section" [class.expanded]="message.thinkingExpanded" [class.in-progress]="message.thinkingInProgress">
+                    <button class="thinking-header" (click)="toggleMessageThinking(message)">
+                      @if (message.thinkingInProgress) {
+                        <span class="thinking-indicator">
+                          <span class="pulse"></span>
+                          <i class="pi pi-lightbulb"></i>
+                        </span>
+                        <span>Σκέφτομαι...</span>
+                      } @else {
+                        <i class="pi pi-lightbulb"></i>
+                        <span>Σκέφτηκα για {{ message.thinkingDuration || 'λίγα' }} δευτερόλεπτα</span>
+                        <i class="pi" [class.pi-chevron-down]="!message.thinkingExpanded" [class.pi-chevron-up]="message.thinkingExpanded"></i>
                       }
-                    </div>
-                  }
+                    </button>
+                    @if (message.thinkingExpanded || message.thinkingInProgress) {
+                      <div class="thinking-content" [class.live]="message.thinkingInProgress">
+                        @if (message.thinking) {
+                          <div class="thinking-text">
+                            {{ message.thinking }}
+                            @if (message.thinkingInProgress) {
+                              <span class="cursor">▋</span>
+                            }
+                          </div>
+                        } @else if (message.thinkingInProgress) {
+                          <div class="thinking-loading">
+                            <div class="loading-dots">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
                 }
 
                 <!-- Main message content -->
                 <div class="message-content">
                   @if (message.isStreaming && !message.content && !message.thinkingInProgress) {
-                    <!-- Loading indicator when waiting for response -->
                     <div class="response-loading">
                       <div class="loading-dots">
                         <span></span>
@@ -158,7 +156,18 @@
                   }
                 </div>
 
-                <!-- Message actions for assistant -->
+                <!-- Generated file download -->
+                @if (message.generatedFile) {
+                  <div class="generated-file">
+                    <button class="file-download-btn" (click)="downloadGeneratedFile(message.generatedFile)">
+                      <i class="pi pi-file-export"></i>
+                      <span>{{ message.generatedFile.filename }}</span>
+                      <i class="pi pi-download"></i>
+                    </button>
+                  </div>
+                }
+
+                <!-- Message actions -->
                 @if (message.role === 'assistant' && !message.isStreaming) {
                   <div class="message-actions">
                     <button class="action-btn" pTooltip="Αντιγραφή" (click)="copyMessage(message)">
@@ -181,9 +190,28 @@
         }
       </div>
 
+      <!-- Pending files preview -->
+      @if (pendingFiles.length > 0) {
+        <div class="pending-files-bar">
+          @for (file of pendingFiles; track file.name) {
+            <div class="pending-file-chip">
+              <i class="pi pi-file"></i>
+              <span>{{ file.name }}</span>
+              <button class="remove-file-btn" (click)="removePendingFile(file)">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
       <!-- Bottom input area -->
       <div class="input-area">
-        <div class="input-wrapper">
+        <div class="input-row">
+          <button class="icon-btn" pTooltip="Επισύναψη αρχείου" (click)="triggerFileUpload()">
+            <i class="pi pi-paperclip"></i>
+          </button>
+
           <textarea
             pTextarea
             #messageInput
@@ -194,6 +222,7 @@
             [rows]="1"
             [disabled]="sending"
           ></textarea>
+
           <p-button
             icon="pi pi-arrow-up"
             [rounded]="true"
@@ -203,8 +232,18 @@
             styleClass="send-btn"
           />
         </div>
-        <small class="input-hint">Enter για αποστολή • Shift+Enter για νέα γραμμή</small>
+        <small class="input-hint">Enter για αποστολή · Shift+Enter για νέα γραμμή</small>
       </div>
     }
+
+    <!-- Hidden file input -->
+    <input
+      type="file"
+      #fileInput
+      (change)="onFileSelected($event)"
+      style="display: none"
+      multiple
+      accept=".txt,.md,.pdf,.docx,.xlsx,.pptx,.csv,.json,.xml,.html"
+    />
   }
 </div>

@@ -8,7 +8,8 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TooltipModule } from 'primeng/tooltip';
 import { ChatService } from '../../services/chat.service';
 import { StreamingService } from '../../services/streaming.service';
-import { ChatMessage } from '../../models/chat';
+import { FileService, FileMetadata } from '../../services/file.service';
+import { ChatMessage, GeneratedFileInfo } from '../../models/chat';
 
 @Component({
   selector: 'app-chat-window',
@@ -27,17 +28,23 @@ import { ChatMessage } from '../../models/chat';
 export class ChatWindowComponent implements AfterViewChecked {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   @ViewChild('messageInput') private messageInput!: ElementRef;
+  @ViewChild('fileInput') private fileInput!: ElementRef;
 
   newMessage = '';
   sending = false;
   useStreaming = true;
-  showThinking = true;  // Global toggle for showing thinking sections
+  showThinking = true;
+
+  // File handling
+  pendingFiles: File[] = [];
+  uploadedFileIds: string[] = [];
 
   private shouldScroll = false;
 
   constructor(
     public chatService: ChatService,
-    private streamingService: StreamingService
+    private streamingService: StreamingService,
+    public fileService: FileService
   ) {}
 
   ngAfterViewChecked(): void {
@@ -59,18 +66,45 @@ export class ChatWindowComponent implements AfterViewChecked {
     this.shouldScroll = true;
 
     try {
+      // Upload pending files first
+      if (this.pendingFiles.length > 0) {
+        await this.uploadPendingFiles(chatId);
+      }
+
       if (this.useStreaming) {
-        // Pass showThinking to request thinking from backend
-        await this.streamingService.sendStreamingMessage(content, chatId, this.showThinking);
+        await this.streamingService.sendStreamingMessage(
+          content,
+          chatId,
+          this.showThinking,
+          this.uploadedFileIds
+        );
       } else {
         await this.chatService.sendMessage(content).toPromise();
       }
+
+      // Clear uploaded file IDs after message sent
+      this.uploadedFileIds = [];
+      this.pendingFiles = [];
+
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
       this.sending = false;
       this.shouldScroll = true;
       this.focusInput();
+    }
+  }
+
+  private async uploadPendingFiles(chatId: string): Promise<void> {
+    for (const file of this.pendingFiles) {
+      try {
+        const metadata = await this.fileService.uploadFile(file, chatId).toPromise();
+        if (metadata?.file_id) {
+          this.uploadedFileIds.push(metadata.file_id);
+        }
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+      }
     }
   }
 
@@ -82,45 +116,60 @@ export class ChatWindowComponent implements AfterViewChecked {
   }
 
   trackMessage(index: number, message: ChatMessage): string {
-    return `${index}-${message.role}-${message.timestamp}`;
+    return `${index}-${message.role}-${message.timestamp || index}`;
   }
 
-  /**
-   * Toggle global thinking visibility
-   */
+  // ==========================================================================
+  // File Upload Methods
+  // ==========================================================================
+
+  triggerFileUpload(): void {
+    this.fileInput?.nativeElement?.click();
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      const files = Array.from(input.files);
+      this.pendingFiles = [...this.pendingFiles, ...files];
+      input.value = '';
+    }
+  }
+
+  removePendingFile(file: File): void {
+    this.pendingFiles = this.pendingFiles.filter(f => f !== file);
+  }
+
+  // ==========================================================================
+  // File Download Methods
+  // ==========================================================================
+
+  downloadFile(file: FileMetadata): void {
+    this.fileService.downloadFile(file.file_id, file.original_name);
+  }
+
+  downloadGeneratedFile(file: GeneratedFileInfo): void {
+    this.fileService.downloadFile(file.file_id, file.filename);
+  }
+
+  // ==========================================================================
+  // Thinking Toggle
+  // ==========================================================================
+
   toggleThinking(): void {
     this.showThinking = !this.showThinking;
   }
 
-  /**
-   * Toggle individual message's thinking expansion
-   */
   toggleMessageThinking(message: ChatMessage): void {
     message.thinkingExpanded = !message.thinkingExpanded;
   }
 
-  /**
-   * Parse thinking text into bullet points
-   */
-  parseThinking(thinking: string): string[] {
-    if (!thinking) return [];
+  // ==========================================================================
+  // Utility Methods
+  // ==========================================================================
 
-    // Split by sentences or line breaks
-    const thoughts = thinking
-      .split(/[.!?]\s+|\n+/)
-      .map(t => t.trim())
-      .filter(t => t.length > 10);  // Filter out very short fragments
-
-    // Limit to reasonable number of thoughts
-    return thoughts.slice(0, 5);
-  }
-
-  /**
-   * Copy message content to clipboard
-   */
   copyMessage(message: ChatMessage): void {
     navigator.clipboard.writeText(message.content).then(() => {
-      // Could show a toast notification here
       console.log('Copied to clipboard');
     }).catch(err => {
       console.error('Failed to copy:', err);

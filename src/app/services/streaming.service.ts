@@ -1,23 +1,34 @@
 // src/app/services/streaming.service.ts
-// Streaming service with thinking support
-
 import { Injectable } from '@angular/core';
 import { ChatService } from './chat.service';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
-import { StreamEvent } from '../models/chat';
+import { StreamEvent, GeneratedFileInfo } from '../models/chat';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StreamingService {
-  private abortController: AbortController | null = null;
   private apiUrl = environment.apiUrl;
+  private abortController: AbortController | null = null;
 
-  // Thinking state
+  // Thinking tracking
   private isThinking = false;
-  private thinkingStartTime: number = 0;
+  private thinkingStartTime: number | null = null;
   private currentThinking: string[] = [];
+
+  // Stop tokens to filter
+  private readonly STOP_TOKENS = new Set([
+    '<|im_end|>',
+    '<|endoftext|>',
+    '<|im_start|>',
+    '</s>',
+    '<s>',
+    '[PAD]',
+    '<pad>',
+    '<eos>',
+    '<|end|>',
+  ]);
 
   constructor(
     private chatService: ChatService,
@@ -25,29 +36,31 @@ export class StreamingService {
   ) {}
 
   /**
-   * Send a message and stream the response with thinking support.
+   * Send a streaming message with optional file attachments
    */
   async sendStreamingMessage(
     content: string,
     chatId: string,
-    includeThinking: boolean = true
+    includeThinking: boolean = true,
+    fileIds: string[] = []
   ): Promise<void> {
-    // Add user message to UI immediately
-    this.chatService.addUserMessage(content);
-
-    // Create placeholder for assistant response with thinking support
-    this.chatService.startStreamingMessage();
+    // Cancel any existing stream
+    this.cancelStream();
+    this.abortController = new AbortController();
 
     // Reset thinking state
     this.isThinking = false;
+    this.thinkingStartTime = null;
     this.currentThinking = [];
-    this.thinkingStartTime = 0;
 
-    // Setup abort controller for cancellation
-    this.abortController = new AbortController();
+    // Add user message immediately
+    this.chatService.addUserMessage(content);
+
+    // Create streaming placeholder
+    this.chatService.createStreamingMessage();
 
     try {
-      const token = this.authService.token();
+      const token = this.authService.getToken();
 
       const response = await fetch(`${this.apiUrl}/stream/chat`, {
         method: 'POST',
@@ -59,7 +72,8 @@ export class StreamingService {
           content,
           chat_id: chatId,
           include_thinking: includeThinking,
-          max_tokens: 512
+          max_tokens: 4096,  // Higher max tokens for longer responses
+          file_ids: fileIds.length > 0 ? fileIds : undefined
         }),
         signal: this.abortController.signal
       });
@@ -130,15 +144,12 @@ export class StreamingService {
         this.isThinking = true;
         this.thinkingStartTime = Date.now();
         this.currentThinking = [];
-        // Mark message as thinking in progress and auto-expand
         this.chatService.updateStreamingThinking(true);
         break;
 
       case 'thinking_token':
-        // Accumulate and show thinking content live
         if (this.isThinking && event.data) {
           this.currentThinking.push(event.data);
-          // Update the thinking content in real-time
           this.chatService.appendToStreamingThinking(event.data);
         }
         break;
@@ -147,75 +158,120 @@ export class StreamingService {
         this.isThinking = false;
         const duration = this.thinkingStartTime
           ? Math.round((Date.now() - this.thinkingStartTime) / 1000)
-          : undefined;
-        // Mark thinking complete with duration
-        this.chatService.updateStreamingThinking(false, duration);
-        break;
-
-      case 'token':
-        // Only append to visible content if not in thinking mode
-        if (!this.isThinking) {
-          this.chatService.appendToStreamingMessage(event.data);
-        } else {
-          // If still getting tokens during "thinking", treat as thinking
-          this.currentThinking.push(event.data);
-          this.chatService.appendToStreamingThinking(event.data);
-        }
+          : 0;
+        this.chatService.finalizeStreamingThinking(
+          this.currentThinking.join(''),
+          duration
+        );
         break;
 
       case 'response_start':
-        // Response is starting after thinking
+        // Response is starting
+        break;
+
+      case 'token':
+        if (!this.isThinking && event.data) {
+          // Filter stop tokens before displaying
+          const cleanedToken = this.cleanToken(event.data);
+          if (cleanedToken) {
+            this.chatService.appendToStreamingMessage(cleanedToken);
+          }
+        }
         break;
 
       case 'response_end':
         // Response complete
         break;
 
-      case 'status':
-        console.log('Status:', event.data);
+      case 'file_generated':
+        // Handle generated file
+        if (event.data) {
+          try {
+            const fileInfo: GeneratedFileInfo = JSON.parse(event.data);
+            this.chatService.attachGeneratedFile(fileInfo);
+          } catch (e) {
+            console.warn('Invalid file_generated data:', event.data);
+          }
+        }
         break;
 
       case 'done':
-        // Stream finished
+        this.finalizeMessage();
         break;
 
       case 'error':
-        console.error('Stream error from server:', event.data);
+        console.error('Stream error:', event.data);
         this.chatService.removeStreamingMessage();
         break;
 
       case 'heartbeat':
-        // Keep-alive, ignore
+      case 'status':
+        // Ignore heartbeat and status events
         break;
-
-      default:
-        console.warn('Unknown event type:', event.type);
     }
   }
 
   /**
-   * Finalize message with thinking data
+   * Clean token by removing stop tokens
    */
-  private finalizeMessage(): void {
-    const thinkingDuration = this.thinkingStartTime
-      ? Math.round((Date.now() - this.thinkingStartTime) / 1000)
-      : undefined;
+  private cleanToken(token: string): string {
+    // Check if entire token is a stop token
+    if (this.STOP_TOKENS.has(token.trim())) {
+      return '';
+    }
 
-    const thinkingContent = this.currentThinking.length > 0
-      ? this.currentThinking.join('')
-      : undefined;
+    // Remove stop tokens from within the token
+    let result = token;
+    for (const stop of this.STOP_TOKENS) {
+      result = result.split(stop).join('');
+    }
 
-    this.chatService.finalizeStreamingMessage(thinkingContent, thinkingDuration);
+    return result;
   }
 
   /**
-   * Abort the current stream
+   * Finalize the streaming message
    */
-  abort(): void {
+  private finalizeMessage(): void {
+    // Get the full response and clean it
+    const message = this.chatService.getCurrentStreamingMessage();
+    if (message) {
+      const cleanedContent = this.cleanFinalResponse(message.content);
+      this.chatService.finalizeStreamingMessage(cleanedContent);
+    }
+  }
+
+  /**
+   * Clean the final response of any remaining artifacts
+   */
+  private cleanFinalResponse(content: string): string {
+    let result = content;
+
+    // Remove stop tokens
+    for (const stop of this.STOP_TOKENS) {
+      result = result.split(stop).join('');
+    }
+
+    // Remove language markers
+    result = result.replace(/\/(zh|en|el|think|no_think)\b/g, '');
+
+    // Remove any remaining special tags
+    result = result.replace(/<\|[^|]+\|>/g, '');
+
+    // Normalize whitespace
+    result = result.replace(/\n{3,}/g, '\n\n');
+    result = result.trim();
+
+    return result;
+  }
+
+  /**
+   * Cancel the current stream
+   */
+  cancelStream(): void {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
-      this.isThinking = false;
     }
   }
 

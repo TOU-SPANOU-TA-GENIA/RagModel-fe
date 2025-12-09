@@ -265,7 +265,7 @@
 // =============================================================================
 // Messages Container
 // =============================================================================
-.messages-container {
+.messages-area {
   flex: 1;
   overflow-y: auto;
   padding: 2rem 1.5rem;
@@ -404,6 +404,16 @@
     .thinking-indicator {
       display: flex;
       align-items: center;
+      position: relative;
+
+      .pulse {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        background: rgba(0, 229, 255, 0.3);
+        border-radius: 50%;
+        animation: pulse-ring 1.5s ease-out infinite;
+      }
 
       i {
         color: var(--prometheus-cyan);
@@ -458,38 +468,17 @@
       justify-content: center;
       padding: 1rem;
     }
+  }
+}
 
-    ul {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-
-      li {
-        position: relative;
-        padding: 0.5rem 0 0.5rem 1.25rem;
-        color: var(--prometheus-text-secondary);
-        font-size: 0.9rem;
-        line-height: 1.6;
-        border-left: 2px solid rgba(0, 229, 255, 0.2);
-        margin-left: 0.5rem;
-
-        &::before {
-          content: '';
-          position: absolute;
-          left: -5px;
-          top: 0.85rem;
-          width: 8px;
-          height: 8px;
-          background: var(--prometheus-cyan);
-          border-radius: 50%;
-          opacity: 0.6;
-        }
-
-        &:not(:last-child) {
-          border-bottom: 1px dashed rgba(0, 229, 255, 0.1);
-        }
-      }
-    }
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
   }
 }
 
@@ -628,6 +617,36 @@
   }
 }
 
+.input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+
+  textarea {
+    flex: 1;
+    resize: none;
+    max-height: 150px;
+    padding: 0.875rem 1rem;
+    background: var(--prometheus-bg-card);
+    border: 1px solid var(--prometheus-border);
+    border-radius: 12px;
+    color: var(--prometheus-text-primary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+
+    &:focus {
+      border-color: var(--prometheus-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1),
+                  0 0 20px rgba(0, 229, 255, 0.1);
+    }
+
+    &::placeholder {
+      color: var(--prometheus-text-muted);
+    }
+  }
+}
+
 .input-wrapper {
   display: flex;
   gap: 0.75rem;
@@ -694,6 +713,128 @@
 
   .p-progress-spinner-circle {
     stroke: var(--prometheus-cyan);
+  }
+}
+
+// =============================================================================
+// File Upload Additions
+// =============================================================================
+
+// Attached files in message
+.attached-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--prometheus-cyan);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: var(--prometheus-cyan);
+  }
+}
+
+// Generated file download button
+.generated-file {
+  margin-top: 0.75rem;
+}
+
+.file-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 229, 255, 0.05));
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--prometheus-cyan);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 229, 255, 0.1));
+    border-color: var(--prometheus-cyan);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 229, 255, 0.2);
+  }
+}
+
+// Pending files bar
+.pending-files-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--prometheus-bg-card);
+  border-top: 1px solid var(--prometheus-border);
+}
+
+.pending-file-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--prometheus-text-primary);
+
+  .remove-file-btn {
+    background: transparent;
+    border: none;
+    padding: 0.2rem;
+    cursor: pointer;
+    color: var(--prometheus-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #ff5555;
+    }
+  }
+}
+
+// Icon button for attachment
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--prometheus-border);
+  border-radius: 10px;
+  color: var(--prometheus-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: var(--prometheus-cyan);
+    color: var(--prometheus-cyan);
+  }
+
+  i {
+    font-size: 1.1rem;
   }
 }
 

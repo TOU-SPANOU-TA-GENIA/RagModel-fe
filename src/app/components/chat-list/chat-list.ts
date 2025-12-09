@@ -27,7 +27,6 @@ import { ChatSummary } from '../../models/chat';
   styleUrl: './chat-list.scss'
 })
 export class ChatListComponent implements OnInit {
-  // Track which chat is being edited (by ID, not hardcoded)
   editingChatId: string | null = null;
   editingTitle: string = '';
 
@@ -42,49 +41,32 @@ export class ChatListComponent implements OnInit {
   }
 
   selectChat(chat: ChatSummary): void {
-    // Don't navigate if we're editing this chat
     if (this.editingChatId === chat.id) return;
-
     this.chatService.setActiveChat(chat.id);
     this.chatService.navigateToChat(chat.id);
   }
 
-  /**
-   * Start inline editing for a chat.
-   * Generic approach: works with any chat item.
-   */
   startEditing(event: Event, chat: ChatSummary): void {
     event.stopPropagation();
     this.editingChatId = chat.id;
     this.editingTitle = chat.title;
   }
 
-  /**
-   * Save the edited title.
-   */
   saveTitle(chat: ChatSummary): void {
     const newTitle = this.editingTitle.trim();
-
     if (newTitle && newTitle !== chat.title) {
       this.chatService.renameChat(chat.id, newTitle).subscribe({
         error: err => console.error('Failed to rename chat:', err)
       });
     }
-
     this.cancelEditing();
   }
 
-  /**
-   * Cancel editing mode.
-   */
   cancelEditing(): void {
     this.editingChatId = null;
     this.editingTitle = '';
   }
 
-  /**
-   * Handle keyboard events during editing.
-   */
   onEditKeydown(event: KeyboardEvent, chat: ChatSummary): void {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -96,7 +78,6 @@ export class ChatListComponent implements OnInit {
 
   deleteChat(event: Event, chat: ChatSummary): void {
     event.stopPropagation();
-
     this.confirmationService.confirm({
       target: event.target as EventTarget,
       message: `Διαγραφή "${chat.title}";`,
@@ -109,20 +90,35 @@ export class ChatListComponent implements OnInit {
     });
   }
 
-  formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
+  formatDate(dateStr: string | undefined): string {
+    // Handle undefined or null dates
+    if (!dateStr) {
+      return '';
+    }
 
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    try {
+      const date = new Date(dateStr);
 
-    if (minutes < 1) return 'Τώρα';
-    if (minutes < 60) return `${minutes} λεπτά πριν`;
-    if (hours < 24) return `${hours} ώρες πριν`;
-    if (days < 7) return `${days} μέρες πριν`;
+      // Check for invalid date
+      if (isNaN(date.getTime())) {
+        return '';
+      }
 
-    return date.toLocaleDateString('el-GR');
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'Τώρα';
+      if (minutes < 60) return `${minutes} λεπτά πριν`;
+      if (hours < 24) return `${hours} ώρες πριν`;
+      if (days < 7) return `${days} μέρες πριν`;
+
+      return date.toLocaleDateString('el-GR');
+    } catch {
+      return '';
+    }
   }
 }
