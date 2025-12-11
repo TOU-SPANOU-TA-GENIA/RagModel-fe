@@ -1,0 +1,472 @@
+// src/app/components/logistics-audit/logistics-audit.component.scss
+
+.logistics-audit-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+// =============================================================================
+// Header
+// =============================================================================
+
+.audit-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--prometheus-cyan);
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+
+    i {
+      font-size: 1.75rem;
+    }
+  }
+
+  .subtitle {
+    color: var(--prometheus-text-secondary);
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+// =============================================================================
+// Cards
+// =============================================================================
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--prometheus-cyan);
+  border-bottom: 1px solid var(--prometheus-border);
+
+  i {
+    font-size: 1.25rem;
+  }
+}
+
+.upload-card,
+.options-card {
+  margin-bottom: 1.5rem;
+}
+
+// =============================================================================
+// Upload Section
+// =============================================================================
+
+.upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+  color: var(--prometheus-text-secondary);
+
+  i {
+    font-size: 3rem;
+    color: var(--prometheus-cyan-dim);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .supported-formats {
+    font-size: 0.85rem;
+    color: var(--prometheus-text-muted);
+  }
+}
+
+.uploaded-files {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--prometheus-border);
+
+  h4 {
+    margin: 0 0 1rem;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--prometheus-text-secondary);
+  }
+
+  .file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--prometheus-bg-deep);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+
+      i.pi-file {
+        color: var(--prometheus-cyan);
+      }
+
+      .file-name {
+        flex: 1;
+        font-weight: 500;
+      }
+
+      .file-size {
+        color: var(--prometheus-text-muted);
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Options
+// =============================================================================
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  .option-item {
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--prometheus-text-secondary);
+    }
+
+    &.checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      label {
+        margin: 0;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+.analyze-button-container {
+  display: flex;
+  justify-content: center;
+
+  .analyze-btn {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 2rem;
+  }
+}
+
+// =============================================================================
+// Loading
+// =============================================================================
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+  text-align: center;
+
+  p {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.1rem;
+    color: var(--prometheus-text-primary);
+  }
+
+  .loading-hint {
+    color: var(--prometheus-text-muted);
+    font-size: 0.9rem;
+  }
+}
+
+// =============================================================================
+// Results
+// =============================================================================
+
+.results-section {
+  margin-top: 2rem;
+}
+
+// Summary Cards
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  .summary-card {
+    .summary-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem;
+
+      i {
+        font-size: 2rem;
+        color: var(--prometheus-cyan);
+      }
+
+      .summary-data {
+        display: flex;
+        flex-direction: column;
+
+        .summary-value {
+          font-family: var(--font-display);
+          font-size: 1.75rem;
+          font-weight: 600;
+          color: var(--prometheus-text-primary);
+        }
+
+        .summary-label {
+          font-size: 0.85rem;
+          color: var(--prometheus-text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+      }
+    }
+
+    &.has-critical {
+      border-color: rgba(239, 68, 68, 0.5);
+
+      i {
+        color: #ef4444;
+      }
+    }
+  }
+}
+
+// Anomaly Items
+.anomaly-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+
+  .anomaly-title {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .anomaly-id {
+    font-size: 0.8rem;
+    color: var(--prometheus-text-muted);
+    font-family: monospace;
+  }
+}
+
+.anomaly-content {
+  padding: 1rem 0;
+
+  .anomaly-description {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 1.5rem;
+  }
+
+  .anomaly-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--prometheus-bg-deep);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+
+    .meta-item {
+      strong {
+        display: block;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--prometheus-text-muted);
+        margin-bottom: 0.25rem;
+      }
+
+      span {
+        color: var(--prometheus-text-primary);
+      }
+    }
+  }
+
+  .evidence-section,
+  .actions-section {
+    margin-bottom: 1.5rem;
+
+    h5 {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--prometheus-cyan);
+      margin: 0 0 0.75rem;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      li {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+
+        code {
+          background: var(--prometheus-bg-deep);
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          color: var(--prometheus-cyan-dim);
+        }
+
+        i {
+          color: var(--prometheus-cyan);
+          margin-top: 0.1rem;
+        }
+      }
+    }
+  }
+}
+
+.no-anomalies {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+  color: var(--prometheus-text-secondary);
+
+  i {
+    font-size: 3rem;
+    color: #22c55e;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+}
+
+// Recommendations
+.recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--prometheus-bg-deep);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--prometheus-cyan);
+
+    i {
+      color: var(--prometheus-cyan);
+      margin-top: 0.1rem;
+    }
+  }
+}
+
+.no-recommendations {
+  color: var(--prometheus-text-muted);
+  text-align: center;
+  padding: 2rem;
+}
+
+// Charts
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 1rem 0;
+
+  .chart-container {
+    h4 {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--prometheus-text-secondary);
+      margin: 0 0 1rem;
+      text-align: center;
+    }
+  }
+}
+
+// Download Section
+.download-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--prometheus-bg-card);
+  border: 1px solid var(--prometheus-border);
+  border-radius: 8px;
+
+  .download-btn {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .report-name {
+    color: var(--prometheus-text-muted);
+    font-size: 0.9rem;
+  }
+}
+
+// =============================================================================
+// Responsive
+// =============================================================================
+
+@media (max-width: 768px) {
+  .logistics-audit-container {
+    padding: 1rem;
+  }
+
+  .audit-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .anomaly-header {
+    flex-wrap: wrap;
+
+    .anomaly-id {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+  }
+}

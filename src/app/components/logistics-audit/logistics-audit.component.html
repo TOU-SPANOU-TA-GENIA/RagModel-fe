@@ -1,0 +1,334 @@
+<!-- src/app/components/logistics-audit/logistics-audit.component.html -->
+<div class="logistics-audit-container">
+
+  <!-- Header -->
+  <div class="audit-header">
+    <h1>
+      <i class="pi pi-search"></i>
+      Έλεγχος Εφοδιαστικής
+    </h1>
+    <p class="subtitle">Ανάλυση εγγράφων για εντοπισμό ανωμαλιών και αποκλίσεων</p>
+  </div>
+
+  <!-- Error Message -->
+  @if (error()) {
+    <p-message severity="error" [text]="error()" styleClass="w-full mb-4" />
+  }
+
+  <!-- Upload Section -->
+  <p-card styleClass="upload-card">
+    <ng-template pTemplate="header">
+      <div class="card-header">
+        <i class="pi pi-upload"></i>
+        <span>Μεταφόρτωση Εγγράφων</span>
+      </div>
+    </ng-template>
+
+    <p-fileupload
+      mode="advanced"
+      [multiple]="true"
+      accept=".xlsx,.xls,.csv,.pdf,.docx,.txt"
+      [maxFileSize]="50000000"
+      (onSelect)="onFilesSelected($event)"
+      [auto]="true"
+      [customUpload]="true"
+      chooseLabel="Επιλογή Αρχείων"
+      chooseIcon="pi pi-folder-open"
+      [disabled]="isUploading()"
+    >
+      <ng-template pTemplate="empty">
+        <div class="upload-empty">
+          <i class="pi pi-cloud-upload"></i>
+          <p>Σύρετε αρχεία εδώ ή κάντε κλικ για επιλογή</p>
+          <span class="supported-formats">
+            Υποστηριζόμενοι τύποι: Excel, CSV, PDF, Word, Text
+          </span>
+        </div>
+      </ng-template>
+    </p-fileupload>
+
+    <!-- Uploaded Files List -->
+    @if (uploadedFiles().length > 0) {
+      <div class="uploaded-files">
+        <h4>Μεταφορτωμένα Αρχεία ({{ uploadedFiles().length }})</h4>
+        <ul class="file-list">
+          @for (file of uploadedFiles(); track file.path) {
+            <li>
+              <i class="pi pi-file"></i>
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size">{{ formatFileSize(file.size) }}</span>
+              <p-button
+                icon="pi pi-times"
+                [text]="true"
+                severity="danger"
+                size="small"
+                (onClick)="removeFile(file)"
+                pTooltip="Αφαίρεση"
+              />
+            </li>
+          }
+        </ul>
+        <p-button
+          label="Καθαρισμός Όλων"
+          icon="pi pi-trash"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="clearFiles()"
+        />
+      </div>
+    }
+  </p-card>
+
+  <!-- Analysis Options -->
+  @if (hasFiles()) {
+    <p-card styleClass="options-card">
+      <ng-template pTemplate="header">
+        <div class="card-header">
+          <i class="pi pi-cog"></i>
+          <span>Επιλογές Ανάλυσης</span>
+        </div>
+      </ng-template>
+
+      <div class="options-grid">
+        <div class="option-item">
+          <label>Μορφή Αναφοράς</label>
+          <p-select
+            [options]="formatOptions"
+            [(ngModel)]="reportFormat"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="option-item checkbox-option">
+          <p-checkbox
+            [(ngModel)]="generateReport"
+            [binary]="true"
+            inputId="genReport"
+          />
+          <label for="genReport">Δημιουργία Αναφοράς Ελέγχου</label>
+        </div>
+
+        <div class="option-item checkbox-option">
+          <p-checkbox
+            [(ngModel)]="includeEvidence"
+            [binary]="true"
+            inputId="inclEvidence"
+          />
+          <label for="inclEvidence">Συμπερίληψη Τεκμηρίων</label>
+        </div>
+      </div>
+
+      <div class="analyze-button-container">
+        <p-button
+          label="Εκτέλεση Ανάλυσης"
+          icon="pi pi-play"
+          (onClick)="analyze()"
+          [loading]="isAnalyzing()"
+          [disabled]="!canAnalyze()"
+          styleClass="analyze-btn"
+        />
+      </div>
+    </p-card>
+  }
+
+  <!-- Loading State -->
+  @if (isAnalyzing()) {
+    <div class="loading-container">
+      <p-progressspinner strokeWidth="3" />
+      <p>Ανάλυση εγγράφων σε εξέλιξη...</p>
+      <span class="loading-hint">Εξαγωγή δεδομένων και εντοπισμός ανωμαλιών</span>
+    </div>
+  }
+
+  <!-- Results Section -->
+  @if (analysisResult(); as result) {
+    <div class="results-section">
+
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <p-card styleClass="summary-card">
+          <div class="summary-content">
+            <i class="pi pi-file-edit"></i>
+            <div class="summary-data">
+              <span class="summary-value">{{ result.documents_analyzed }}</span>
+              <span class="summary-label">Έγγραφα</span>
+            </div>
+          </div>
+        </p-card>
+
+        <p-card styleClass="summary-card">
+          <div class="summary-content">
+            <i class="pi pi-database"></i>
+            <div class="summary-data">
+              <span class="summary-value">{{ result.entities_found }}</span>
+              <span class="summary-label">Οντότητες</span>
+            </div>
+          </div>
+        </p-card>
+
+        <p-card styleClass="summary-card" [class.has-critical]="criticalCount() > 0">
+          <div class="summary-content">
+            <i class="pi pi-exclamation-triangle"></i>
+            <div class="summary-data">
+              <span class="summary-value">{{ result.anomaly_count }}</span>
+              <span class="summary-label">Ευρήματα</span>
+            </div>
+          </div>
+        </p-card>
+
+        <p-card styleClass="summary-card">
+          <div class="summary-content">
+            <i class="pi pi-percentage"></i>
+            <div class="summary-data">
+              <span class="summary-value">{{ result.confidence_score }}</span>
+              <span class="summary-label">Εμπιστοσύνη</span>
+            </div>
+          </div>
+        </p-card>
+      </div>
+
+      <!-- Tabs for Details - PrimeNG 20 syntax -->
+      <p-tabs [value]="0">
+        <p-tablist>
+          <p-tab [value]="0">
+            <i class="pi pi-list"></i>
+            <span>Ευρήματα</span>
+          </p-tab>
+          <p-tab [value]="1">
+            <i class="pi pi-lightbulb"></i>
+            <span>Συστάσεις</span>
+          </p-tab>
+          <p-tab [value]="2">
+            <i class="pi pi-chart-pie"></i>
+            <span>Γραφήματα</span>
+          </p-tab>
+        </p-tablist>
+
+        <p-tabpanels>
+          <!-- Anomalies Panel -->
+          <p-tabpanel [value]="0">
+            @if (result.anomalies && result.anomalies.length > 0) {
+              <p-accordion [multiple]="true">
+                @for (anomaly of result.anomalies; track trackAnomaly($index, anomaly)) {
+                  <p-accordion-panel>
+                    <p-accordion-header>
+                      <div class="anomaly-header">
+                        <p-tag
+                          [value]="getSeverityLabel(anomaly.severity)"
+                          [severity]="getSeverityTag(anomaly.severity)"
+                        />
+                        <span class="anomaly-title">{{ anomaly.title }}</span>
+                        <span class="anomaly-id">{{ anomaly.anomaly_id }}</span>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="anomaly-content">
+                        <p class="anomaly-description">{{ anomaly.description }}</p>
+
+                        <div class="anomaly-meta">
+                          <div class="meta-item">
+                            <strong>Κατηγορία:</strong>
+                            <span>{{ getCategoryName(anomaly.category) }}</span>
+                          </div>
+                          <div class="meta-item">
+                            <strong>Εμπιστοσύνη:</strong>
+                            <span>{{ (anomaly.confidence * 100).toFixed(0) }}%</span>
+                          </div>
+                          <div class="meta-item">
+                            <strong>Πηγές:</strong>
+                            <span>{{ anomaly.source_documents.join(', ') }}</span>
+                          </div>
+                        </div>
+
+                        @if (anomaly.evidence && anomaly.evidence.length > 0) {
+                          <div class="evidence-section">
+                            <h5>Τεκμήρια</h5>
+                            <ul>
+                              @for (ev of anomaly.evidence; track ev) {
+                                <li><code>{{ ev }}</code></li>
+                              }
+                            </ul>
+                          </div>
+                        }
+
+                        @if (anomaly.suggested_actions && anomaly.suggested_actions.length > 0) {
+                          <div class="actions-section">
+                            <h5>Προτεινόμενες Ενέργειες</h5>
+                            <ul>
+                              @for (action of anomaly.suggested_actions; track action) {
+                                <li>
+                                  <i class="pi pi-arrow-right"></i>
+                                  {{ action }}
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        }
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                }
+              </p-accordion>
+            } @else {
+              <div class="no-anomalies">
+                <i class="pi pi-check-circle"></i>
+                <p>Δεν εντοπίστηκαν ανωμαλίες</p>
+              </div>
+            }
+          </p-tabpanel>
+
+          <!-- Recommendations Panel -->
+          <p-tabpanel [value]="1">
+            @if (result.recommendations && result.recommendations.length > 0) {
+              <ul class="recommendations-list">
+                @for (rec of result.recommendations; track rec) {
+                  <li>
+                    <i class="pi pi-info-circle"></i>
+                    {{ rec }}
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="no-recommendations">Δεν υπάρχουν συστάσεις</p>
+            }
+          </p-tabpanel>
+
+          <!-- Charts Panel -->
+          <p-tabpanel [value]="2">
+            <div class="charts-grid">
+              @if (severityChartData()) {
+                <div class="chart-container">
+                  <h4>Κατανομή Σοβαρότητας</h4>
+                  <p-chart type="doughnut" [data]="severityChartData()!" />
+                </div>
+              }
+
+              @if (categoryChartData()) {
+                <div class="chart-container">
+                  <h4>Ευρήματα ανά Κατηγορία</h4>
+                  <p-chart type="bar" [data]="categoryChartData()!" />
+                </div>
+              }
+            </div>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+
+      <!-- Download Report Button -->
+      @if (result.report_name) {
+        <div class="download-section">
+          <p-button
+            label="Λήψη Αναφοράς Ελέγχου"
+            icon="pi pi-download"
+            (onClick)="downloadReport()"
+            styleClass="download-btn"
+          />
+          <span class="report-name">{{ result.report_name }}</span>
+        </div>
+      }
+    </div>
+  }
+
+</div>
