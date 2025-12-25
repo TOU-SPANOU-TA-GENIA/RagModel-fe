@@ -1,0 +1,185 @@
+<!-- src/app/components/workflows/workflows-page.html -->
+<div class="workflows-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1>
+        <i class="pi pi-sitemap"></i>
+        Ροές Εργασίας
+      </h1>
+      <span class="subtitle">Αυτοματοποίηση εργασιών και ειδοποιήσεων</span>
+    </div>
+    <div class="header-actions">
+      <p-button
+        label="Νέα Ροή"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        [raised]="true"
+      />
+    </div>
+  </div>
+
+  <!-- Workflows Table -->
+  <div class="workflows-table">
+    <p-table
+      [value]="workflowService.workflows()"
+      [loading]="workflowService.loading()"
+      [paginator]="true"
+      [rows]="10"
+      [rowHover]="true"
+      styleClass="p-datatable-sm"
+      [globalFilterFields]="['name', 'description']"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 3rem">
+            <i class="pi pi-bolt" pTooltip="Κατάσταση"></i>
+          </th>
+          <th pSortableColumn="name">Όνομα <p-sortIcon field="name" /></th>
+          <th>Περιγραφή</th>
+          <th style="width: 5rem">Κόμβοι</th>
+          <th pSortableColumn="last_run_at">Τελευταία Εκτέλεση <p-sortIcon field="last_run_at" /></th>
+          <th style="width: 12rem">Ενέργειες</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-workflow>
+        <tr (click)="editWorkflow(workflow)" class="clickable-row">
+          <td>
+            <p-tag
+              [severity]="getStatusSeverity(workflow.is_enabled)"
+              [value]="workflow.is_enabled ? 'ON' : 'OFF'"
+              [rounded]="true"
+            />
+          </td>
+          <td>
+            <div class="workflow-name">
+              <span class="name">{{ workflow.name }}</span>
+              @if (workflow.is_shared) {
+                <i class="pi pi-users" pTooltip="Κοινόχρηστο"></i>
+              }
+            </div>
+          </td>
+          <td class="description-cell">
+            {{ workflow.description || '-' }}
+          </td>
+          <td class="center">
+            <span class="node-count">{{ workflow.node_count }}</span>
+          </td>
+          <td>
+            {{ formatDate(workflow.last_run_at) }}
+          </td>
+          <td>
+            <div class="action-buttons">
+              <p-button
+                icon="pi pi-play"
+                [rounded]="true"
+                [text]="true"
+                severity="success"
+                pTooltip="Εκτέλεση"
+                (onClick)="runWorkflow(workflow, $event)"
+              />
+              <p-button
+                [icon]="workflow.is_enabled ? 'pi pi-pause' : 'pi pi-bolt'"
+                [rounded]="true"
+                [text]="true"
+                [severity]="workflow.is_enabled ? 'warn' : 'info'"
+                [pTooltip]="workflow.is_enabled ? 'Απενεργοποίηση' : 'Ενεργοποίηση'"
+                (onClick)="toggleWorkflow(workflow); $event.stopPropagation()"
+              />
+              <p-button
+                icon="pi pi-pencil"
+                [rounded]="true"
+                [text]="true"
+                pTooltip="Επεξεργασία"
+                (onClick)="editWorkflow(workflow); $event.stopPropagation()"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [rounded]="true"
+                [text]="true"
+                severity="danger"
+                pTooltip="Διαγραφή"
+                (onClick)="deleteWorkflow(workflow, $event)"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="empty-message">
+            <div class="empty-state">
+              <i class="pi pi-sitemap"></i>
+              <h3>Δεν υπάρχουν ροές εργασίας</h3>
+              <p>Δημιουργήστε την πρώτη σας ροή για να αυτοματοποιήσετε εργασίες</p>
+              <p-button
+                label="Δημιουργία Ροής"
+                icon="pi pi-plus"
+                (onClick)="openCreateDialog()"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<!-- Create Dialog -->
+<p-dialog
+  header="Νέα Ροή Εργασίας"
+  [visible]="showCreateDialog()"
+  (visibleChange)="showCreateDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '500px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="dialog-content">
+    <div class="field">
+      <label for="name">Όνομα *</label>
+      <input
+        id="name"
+        type="text"
+        pInputText
+        [(ngModel)]="newWorkflow.name"
+        placeholder="π.χ. Ημερήσια Ανάλυση Logistics"
+        class="w-full"
+      />
+    </div>
+    <div class="field">
+      <label for="description">Περιγραφή</label>
+      <textarea
+        id="description"
+        pTextarea
+        [(ngModel)]="newWorkflow.description"
+        placeholder="Περιγράψτε τι κάνει αυτή η ροή..."
+        rows="3"
+        class="w-full"
+      ></textarea>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Άκυρο"
+      icon="pi pi-times"
+      [text]="true"
+      (onClick)="showCreateDialog.set(false)"
+    />
+    <p-button
+      label="Δημιουργία"
+      icon="pi pi-check"
+      (onClick)="createWorkflow()"
+      [disabled]="!newWorkflow.name.trim()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog />
+
+<!-- Toast Messages -->
+<p-toast />

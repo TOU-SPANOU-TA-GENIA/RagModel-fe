@@ -5,7 +5,7 @@ import { authGuard, guestGuard } from './guards/auth.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'login',
+    redirectTo: 'chat',
     pathMatch: 'full'
   },
   {
@@ -28,7 +28,21 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'workflows',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./components/workflows/workflows-page').then(m => m.WorkflowsPageComponent)
+      },
+      {
+        path: ':id',
+        loadComponent: () => import('./components/workflows/workflow-editor/workflow-editor').then(m => m.WorkflowEditorComponent)
+      }
+    ]
+  },
+  {
     path: '**',
-    redirectTo: 'login'
+    redirectTo: 'chat'
   }
 ];

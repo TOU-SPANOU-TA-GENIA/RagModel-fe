@@ -1,21 +1,59 @@
+<!-- src/app/components/sidebar/sidebar.html -->
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="brand-mini">
-      <!-- <img src="assets/images/prometheus-logo.png" alt="Prometheus" class="brand-logo" /> -->
       <span class="brand-text">PROMETHEUS</span>
     </div>
 
-    <p-button
-      icon="pi pi-plus"
-      label="Νέα Συνομιλία"
-      (onClick)="onNewChat()"
-      styleClass="w-full"
-      severity="secondary"
-    />
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button
+        class="nav-tab"
+        [class.active]="activeSection() === 'chat'"
+        (click)="navigateTo('chat')"
+        pRipple
+      >
+        <i class="pi pi-comments"></i>
+        <span>Συνομιλίες</span>
+      </button>
+      <button
+        class="nav-tab"
+        [class.active]="activeSection() === 'workflows'"
+        (click)="navigateTo('workflows')"
+        pRipple
+      >
+        <i class="pi pi-sitemap"></i>
+        <span>Ροές</span>
+      </button>
+    </div>
+
+    <!-- New Chat Button (only in chat section) -->
+    @if (activeSection() === 'chat') {
+      <p-button
+        icon="pi pi-plus"
+        label="Νέα Συνομιλία"
+        (onClick)="onNewChat()"
+        styleClass="w-full mt-3"
+        severity="secondary"
+      />
+    }
   </div>
 
   <div class="sidebar-content">
-    <app-chat-list />
+    <!-- Chat list only shown in chat section -->
+    @if (activeSection() === 'chat') {
+      <app-chat-list />
+    }
+
+    <!-- Workflows quick info in workflows section -->
+    @if (activeSection() === 'workflows') {
+      <div class="workflows-info">
+        <div class="info-item">
+          <i class="pi pi-info-circle"></i>
+          <span>Δημιουργήστε αυτοματοποιημένες ροές εργασίας για ανάλυση εγγράφων και ειδοποιήσεις.</span>
+        </div>
+      </div>
+    }
   </div>
 
   <div class="sidebar-footer">

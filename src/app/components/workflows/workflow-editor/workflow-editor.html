@@ -1,0 +1,286 @@
+<!-- src/app/components/workflows/workflow-editor/workflow-editor.html -->
+<div class="workflow-editor">
+  <!-- Header -->
+  <div class="editor-header">
+    <div class="header-left">
+      <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
+      <h2>{{ workflow()?.name || 'Workflow Editor' }}</h2>
+      @if (hasChanges()) {
+        <span class="unsaved-indicator">●</span>
+      }
+    </div>
+    <div class="header-actions">
+      <p-button label="Αποθήκευση" icon="pi pi-save"
+              [disabled]="!hasChanges() || saving()"
+              [loading]="saving()"
+              (onClick)="save()" />
+      <p-button label="Εκτέλεση" icon="pi pi-play"
+              severity="success"
+              [disabled]="nodes().length === 0"
+              (onClick)="run()" />
+    </div>
+  </div>
+
+  <div class="editor-body">
+    <!-- Node Palette -->
+    <div class="node-palette">
+      <div class="palette-section">
+        <div class="section-header" (click)="toggleSection('triggers')">
+          <i class="pi pi-bolt"></i>
+          <span>Triggers</span>
+          <i class="pi" [class.pi-chevron-down]="openSections['triggers']"
+             [class.pi-chevron-right]="!openSections['triggers']"></i>
+        </div>
+        @if (openSections['triggers']) {
+          <div class="palette-nodes">
+            @for (node of workflowService.nodeTypes()?.triggers || []; track node.type) {
+              <div class="palette-node trigger" (click)="addNode(node.type, node)">
+                <i class="pi pi-bolt"></i>
+                <span>{{ node.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="palette-section">
+        <div class="section-header" (click)="toggleSection('processors')">
+          <i class="pi pi-cog"></i>
+          <span>Επεξεργαστές</span>
+          <i class="pi" [class.pi-chevron-down]="openSections['processors']"
+             [class.pi-chevron-right]="!openSections['processors']"></i>
+        </div>
+        @if (openSections['processors']) {
+          <div class="palette-nodes">
+            @for (node of workflowService.nodeTypes()?.processors || []; track node.type) {
+              <div class="palette-node processor" (click)="addNode(node.type, node)">
+                <i class="pi pi-microchip-ai"></i>
+                <span>{{ node.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="palette-section">
+        <div class="section-header" (click)="toggleSection('actions')">
+          <i class="pi pi-send"></i>
+          <span>Ενέργειες</span>
+          <i class="pi" [class.pi-chevron-down]="openSections['actions']"
+             [class.pi-chevron-right]="!openSections['actions']"></i>
+        </div>
+        @if (openSections['actions']) {
+          <div class="palette-nodes">
+            @for (node of workflowService.nodeTypes()?.actions || []; track node.type) {
+              <div class="palette-node action" (click)="addNode(node.type, node)">
+                <i class="pi pi-file-export"></i>
+                <span>{{ node.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="palette-section">
+        <div class="section-header" (click)="toggleSection('flow')">
+          <i class="pi pi-sitemap"></i>
+          <span>Ροή</span>
+          <i class="pi" [class.pi-chevron-down]="openSections['flow']"
+             [class.pi-chevron-right]="!openSections['flow']"></i>
+        </div>
+        @if (openSections['flow']) {
+          <div class="palette-nodes">
+            @for (node of workflowService.nodeTypes()?.flow || []; track node.type) {
+              <div class="palette-node flow" (click)="addNode(node.type, node)">
+                <i class="pi pi-code-branch"></i>
+                <span>{{ node.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-container"
+         #canvasContainer
+         (mousedown)="onCanvasMouseDown($event)"
+         (mousemove)="onCanvasMouseMove($event)"
+         (mouseup)="onCanvasMouseUp($event)"
+         (wheel)="onCanvasWheel($event)">
+
+      <!-- Nodes layer (must be first for z-index) -->
+      <div class="nodes-layer" [style.transform]="'scale(' + zoom() + ')'">
+        @for (node of nodes(); track node.id) {
+          <div class="workflow-node"
+               [class]="getNodeClass(node)"
+               [class.selected]="selectedNodeId() === node.id"
+               [style.left.px]="node.position.x"
+               [style.top.px]="node.position.y"
+               (mousedown)="onNodeMouseDown($event, node.id)">
+
+            <!-- Input connector -->
+            @if (!isTrigger(node.type)) {
+              <div class="connector input"
+                   (mouseup)="onConnectorMouseUp($event, node.id, 'input')">
+              </div>
+            }
+
+            <!-- Node content -->
+            <div class="node-content" (click)="selectNode(node.id)">
+              <i class="pi" [class]="getNodeIconClass(node.type)"></i>
+              <span class="node-label">{{ node.label }}</span>
+              <span class="node-type">{{ getNodeTypeLabel(node.type) }}</span>
+            </div>
+
+            <!-- Output connector -->
+            <div class="connector output"
+                 (mousedown)="onConnectorMouseDown($event, node.id, 'output')">
+            </div>
+
+            <!-- Delete button -->
+            <button class="delete-btn" (click)="deleteNode(node.id); $event.stopPropagation()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        }
+
+        <!-- SVG for edges - same layer as nodes -->
+        <svg class="edges-layer">
+          @for (edge of edges(); track edge.id) {
+            <g class="edge">
+              <path [attr.d]="getEdgePath(edge)"
+                    class="edge-path"
+                    [class.selected]="selectedEdgeId() === edge.id"
+                    (click)="selectEdge(edge.id); $event.stopPropagation()" />
+              <path [attr.d]="getEdgePath(edge)"
+                    class="edge-hitbox"
+                    (click)="selectEdge(edge.id); $event.stopPropagation()" />
+              <!-- Delete button on selected edge -->
+              @if (selectedEdgeId() === edge.id) {
+                <circle [attr.cx]="getEdgeMidpointX(edge)"
+                        [attr.cy]="getEdgeMidpointY(edge)"
+                        r="12"
+                        class="edge-delete-bg"
+                        (click)="onDeleteEdgeClick($event, edge.id)" />
+                <text [attr.x]="getEdgeMidpointX(edge)"
+                      [attr.y]="getEdgeMidpointY(edge) + 5"
+                      text-anchor="middle"
+                      class="edge-delete-icon"
+                      (click)="onDeleteEdgeClick($event, edge.id)">×</text>
+              }
+            </g>
+          }
+
+          <!-- Temporary connection line -->
+          @if (connectionState.tempLine) {
+            <line [attr.x1]="connectionState.tempLine.x1"
+                  [attr.y1]="connectionState.tempLine.y1"
+                  [attr.x2]="connectionState.tempLine.x2"
+                  [attr.y2]="connectionState.tempLine.y2"
+                  class="temp-connection" />
+          }
+        </svg>
+
+        <!-- Empty state -->
+        @if (nodes().length === 0) {
+          <div class="empty-canvas">
+            <i class="pi pi-sitemap"></i>
+            <p>Προσθέστε κόμβους από το αριστερό panel</p>
+          </div>
+        }
+      </div>
+
+      <!-- Zoom controls -->
+      <div class="zoom-controls">
+        <p-button icon="pi pi-plus" [text]="true" (onClick)="zoomIn()" />
+        <span>{{ (zoom() * 100) | number:'1.0-0' }}%</span>
+        <p-button icon="pi pi-minus" [text]="true" (onClick)="zoomOut()" />
+      </div>
+    </div>
+
+    <!-- Config Panel -->
+    @if (selectedNode()) {
+      <div class="config-panel">
+        <div class="panel-header">
+          <h3>Ρυθμίσεις: {{ selectedNode()?.label }}</h3>
+          <p-button icon="pi pi-times" [text]="true" (onClick)="deselectNode()" />
+        </div>
+
+        <div class="panel-body">
+          <!-- Label -->
+          <div class="field">
+            <label>Ετικέτα</label>
+            <input pInputText
+                   [ngModel]="selectedNode()?.label"
+                   (ngModelChange)="updateNodeLabel(selectedNodeId()!, $event)" />
+          </div>
+
+          <!-- Dynamic config fields -->
+          @for (field of getConfigFields(selectedNode()!); track field.key) {
+            <div class="field">
+              <label>{{ field.label || field.key }}</label>
+
+              @switch (field.type) {
+                @case ('string') {
+                  <input pInputText
+                         [ngModel]="selectedNode()?.config?.[field.key]"
+                         (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)" />
+                }
+                @case ('textarea') {
+                  <textarea pTextarea
+                            rows="3"
+                            [ngModel]="selectedNode()?.config?.[field.key]"
+                            (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)">
+                  </textarea>
+                }
+                @case ('number') {
+                  <input pInputText type="number"
+                         [ngModel]="selectedNode()?.config?.[field.key]"
+                         (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, +$event)" />
+                }
+                @case ('boolean') {
+                  <p-checkbox [ngModel]="selectedNode()?.config?.[field.key]"
+                              (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)"
+                              [binary]="true" />
+                }
+                @case ('select') {
+                  <p-select [options]="field.options || []"
+                            [ngModel]="selectedNode()?.config?.[field.key]"
+                            (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)"
+                            placeholder="Επιλέξτε..." />
+                }
+                @case ('array') {
+                  <input pInputText
+                         [ngModel]="(selectedNode()?.config?.[field.key] || []).join(', ')"
+                         (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, parseArray($event))"
+                         placeholder="τιμή1, τιμή2, ..." />
+                }
+                @case ('time') {
+                  <input pInputText type="time"
+                         [ngModel]="selectedNode()?.config?.[field.key]"
+                         (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)" />
+                }
+                @default {
+                  <input pInputText
+                         [ngModel]="selectedNode()?.config?.[field.key]"
+                         (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)" />
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<p-toast />
+
+<!-- Execution Panel -->
+@if (currentExecutionId()) {
+  <app-execution-panel
+    [workflowId]="workflow()?.id || ''"
+    [executionId]="currentExecutionId()"
+    [workflowNodes]="nodesList()" />
+}

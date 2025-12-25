@@ -1,9 +1,8 @@
+// src/app/app.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from './components/sidebar/sidebar';
-import { ChatWindowComponent } from './components/chat-window/chat-window';
-import { ChatListComponent } from './components/chat-list/chat-list';
 import { AuthService } from './services/auth.service';
 
 @Component({
@@ -12,9 +11,7 @@ import { AuthService } from './services/auth.service';
   imports: [
     CommonModule,
     RouterOutlet,
-    SidebarComponent,
-    ChatWindowComponent,
-    //ChatListComponent
+    SidebarComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
