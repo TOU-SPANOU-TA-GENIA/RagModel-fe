@@ -111,6 +111,63 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.nodes().map(n => ({ id: n.id, label: n.label }))
   );
 
+  ruleOperators = [
+    { label: '>', value: '>' },
+    { label: '<', value: '<' },
+    { label: '>=', value: '>=' },
+    { label: '<=', value: '<=' },
+    { label: '=', value: '=' },
+    { label: '≠', value: '!=' },
+    { label: '|abs| >', value: 'abs>' }
+  ];
+
+  severityOptions = [
+    { label: 'Χαμηλή', value: 'low' },
+    { label: 'Μεσαία', value: 'medium' },
+    { label: 'Υψηλή', value: 'high' },
+    { label: 'Κρίσιμη', value: 'critical' }
+  ];
+
+  addRule(fieldKey: string): void {
+    const newRule = {
+      name: `rule_${Date.now()}`,
+      field: '',
+      operator: '>',
+      value: 0,
+      severity: 'medium',
+      message: ''
+    };
+
+    this.nodes.update(nodes =>
+      nodes.map(n => {
+        if (n.id === this.selectedNodeId()) {
+          const rules = [...(n.config?.[fieldKey] || []), newRule];
+          return { ...n, config: { ...n.config, [fieldKey]: rules } };
+        }
+        return n;
+      })
+    );
+    this.hasChanges.set(true);
+  }
+
+  removeRule(fieldKey: string, index: number): void {
+    this.nodes.update(nodes =>
+      nodes.map(n => {
+        if (n.id === this.selectedNodeId()) {
+          const rules = [...(n.config?.[fieldKey] || [])];
+          rules.splice(index, 1);
+          return { ...n, config: { ...n.config, [fieldKey]: rules } };
+        }
+        return n;
+      })
+    );
+    this.hasChanges.set(true);
+  }
+
+  updateRules(fieldKey: string): void {
+    this.hasChanges.set(true);
+  }
+
   constructor(
     public workflowService: WorkflowService,
     private route: ActivatedRoute,
@@ -280,6 +337,13 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    // Ignore if user is typing in an input field
+    const target = event.target as HTMLElement;
+    const tagName = target.tagName.toUpperCase();
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const selectedEdge = this.selectedEdgeId();
       const selectedNode = this.selectedNodeId();

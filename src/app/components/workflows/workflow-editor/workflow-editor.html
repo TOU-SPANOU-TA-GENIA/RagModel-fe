@@ -261,6 +261,54 @@
                          [ngModel]="selectedNode()?.config?.[field.key]"
                          (ngModelChange)="updateNodeConfigField(selectedNodeId()!, field.key, $event)" />
                 }
+                @case ('rule_list') {
+                  <div class="rules-editor">
+                    <div class="rules-list">
+                      @for (rule of selectedNode()?.config?.[field.key] || []; track $index) {
+                        <div class="rule-item">
+                          <div class="rule-header">
+                            <span class="rule-name">{{ rule.name || 'Κανόνας ' + ($index + 1) }}</span>
+                            <span class="rule-severity" [class]="rule.severity">{{ rule.severity }}</span>
+                            <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
+                                    (click)="removeRule(field.key, $index)"></button>
+                          </div>
+                          <div class="rule-body">
+                            <div class="rule-field">
+                              <label>Πεδίο:</label>
+                              <input pInputText [(ngModel)]="rule.field"
+                                    (ngModelChange)="updateRules(field.key)" />
+                            </div>
+                            <div class="rule-field">
+                              <label>Τελεστής:</label>
+                              <p-select [(ngModel)]="rule.operator"
+                                        [options]="ruleOperators"
+                                        (ngModelChange)="updateRules(field.key)" />
+                            </div>
+                            <div class="rule-field">
+                              <label>Τιμή:</label>
+                              <input pInputText type="number" [(ngModel)]="rule.value"
+                                    (ngModelChange)="updateRules(field.key)" />
+                            </div>
+                            <div class="rule-field">
+                              <label>Σοβαρότητα:</label>
+                              <p-select [(ngModel)]="rule.severity"
+                                        [options]="severityOptions"
+                                        (ngModelChange)="updateRules(field.key)" />
+                            </div>
+                            <div class="rule-field full-width">
+                              <label>Μήνυμα:</label>
+                              <input pInputText [(ngModel)]="rule.message"
+                                    (ngModelChange)="updateRules(field.key)" />
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                    <button pButton label="Προσθήκη Κανόνα" icon="pi pi-plus"
+                            class="p-button-outlined p-button-sm"
+                            (click)="addRule(field.key)"></button>
+                  </div>
+                }
                 @default {
                   <input pInputText
                          [ngModel]="selectedNode()?.config?.[field.key]"
